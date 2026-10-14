@@ -5,10 +5,10 @@ Fetches a patient record by FHIR ID and prints name, date of birth, and gender.
 ## Usage
 
 ```bash
-pixi run python demo_01_patient.py [name]
+pixi run patient [camila|derrick|theodore|linda]
 ```
 
-`name` is one of: `camila`, `derrick`, `theodore`, `linda` (defaults to `camila`).
+Defaults to `camila` if no argument is given.
 
 ## Example output
 
@@ -21,7 +21,9 @@ ID:      erXuFYUfucBZaryVksYEcMg3
 
 ## Known sandbox patients
 
-| Key | Name | DOB | Gender | FHIR ID |
+See `pixi run list-patients` for the full table, or [CLI → list-patients](../cli.md#list-patients).
+
+| Key | Name | DOB | Sex | FHIR ID |
 |---|---|---|---|---|
 | `camila` | Camila Lopez | 1987-09-12 | F | `erXuFYUfucBZaryVksYEcMg3` |
 | `derrick` | Derrick Lin | 1973-06-03 | M | `eq081-VQEgP8drUUqCWzHfw3` |
@@ -30,7 +32,7 @@ ID:      erXuFYUfucBZaryVksYEcMg3
 
 ## FHIR resource
 
-The demo calls `GET /Patient/{id}` and reads from the R4 `Patient` resource:
+Calls `GET /Patient/{id}` and reads from the R4 `Patient` resource:
 
 - `name[0].given[0]` — first name
 - `name[0].family` — last name

@@ -34,26 +34,7 @@ EPIC_TOKEN_URL=https://fhir.epic.com/interconnect-fhir-oauth/oauth2/token
 **3. Generate RSA keys**
 
 ```bash
-pixi run python -c "
-from cryptography.hazmat.primitives.asymmetric import rsa
-from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.backends import default_backend
-import json, base64, uuid
-
-key = rsa.generate_private_key(65537, 2048, default_backend())
-
-with open('keys/private_key.pem', 'wb') as f:
-    f.write(key.private_bytes(serialization.Encoding.PEM,
-        serialization.PrivateFormat.PKCS8, serialization.NoEncryption()))
-
-pub = key.public_key().public_numbers()
-def b64(n): return base64.urlsafe_b64encode(n.to_bytes((n.bit_length()+7)//8,'big')).rstrip(b'=').decode()
-
-jwks = {'keys': [{'kty':'RSA','use':'sig','alg':'RS384','kid':str(uuid.uuid4()),'n':b64(pub.n),'e':b64(pub.e)}]}
-with open('keys/public_jwks.json', 'w') as f:
-    json.dump(jwks, f, indent=2)
-print('Keys written to keys/')
-"
+pixi run generate-keys
 ```
 
 **4. Register the public key with Epic**
@@ -63,11 +44,10 @@ Host `keys/public_jwks.json` at a public URL (e.g. a GitHub Gist raw URL) and pa
 ## Running the demos
 
 ```bash
-# Demo 1 — fetch a patient record
-pixi run python demo_01_patient.py [camila|derrick|theodore|linda]
-
-# Demo 2 — fetch lab observations
-pixi run python demo_02_observations.py [theodore|camila|derrick|linda]
+pixi run patient [camila|derrick|theodore|linda]
+pixi run observations [name] [--category vital-signs] [--count 10]
+pixi run list-patients
+pixi run generate-keys
 ```
 
 ## Known sandbox test patients
@@ -84,13 +64,17 @@ pixi run python demo_02_observations.py [theodore|camila|derrick|linda]
 ```
 epic_sandbox/
 ├── keys/
+│   ├── generate_keys.py     # key generation script (run via pixi)
 │   ├── private_key.pem      # gitignored — keep secret
+│   ├── public_key.pem       # gitignored
 │   ├── public_jwks.json     # host this at a public URL for Epic
-│   └── public_key.pem       # gitignored
+│   └── public_jwk.json      # single JWK (reference)
+├── docs/                    # Zensical documentation source
 ├── demo_01_patient.py       # fetch patient demographics
 ├── demo_02_observations.py  # fetch lab results
+├── cli.py                   # Typer CLI (all pixi tasks point here)
 ├── epic_auth.py             # JWT client-credentials auth helper
 ├── .env                     # gitignored — your client ID and URLs
-├── pixi.toml                # dependency management
+├── pixi.toml                # dependency management + task shortcuts
 └── zensical.toml            # docs site config
 ```

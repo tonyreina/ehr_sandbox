@@ -1,41 +1,60 @@
-# Demo 2: Lab Observations
+# Demo 2: Observations
 
-Queries laboratory observations for a patient and prints each result with its date, name, value, and unit.
+Queries observations for a patient and prints each result with its date, name, value, and unit.
 
 ## Usage
 
 ```bash
-pixi run python demo_02_observations.py [name]
+pixi run observations [name] [OPTIONS]
 ```
 
-`name` is one of: `camila`, `derrick`, `theodore`, `linda` (defaults to `theodore`).
+| Option | Default | Description |
+|---|---|---|
+| name | `theodore` | Patient key (camila, derrick, theodore, linda) |
+| `--category` | `laboratory` | FHIR observation category |
+| `--count`, `-n` | `20` | Max results to return |
+
+## Examples
+
+```bash
+# Lab results for Theodore (default)
+pixi run observations
+
+# Vital signs for Camila
+pixi run observations camila --category vital-signs
+
+# Last 5 labs for Linda
+pixi run observations linda --count 5
+```
 
 ## Example output
 
 ```
-Lab results for patient e63wRTbPfr1p8UW81d8Seiw3:
+Laboratory results for theodore (e63wRTbPfr1p8UW81d8Seiw3):
 
-  2024-03-15  Hemoglobin A1C: 7.1 %
-  2024-03-15  Hemoglobin: 15.0 g/dL
-  2024-03-15  Hematocrit: 45 %
-  2024-02-10  Glucose, Ur: 110 mg/dL
-  2024-02-10  Platelets: 200 K/µL
+  2006-07-07  Hemoglobin A1C: 7.1 %
+  2012-10-19  Hemoglobin: 15.0 g/dL
+  2012-10-19  Hematocrit: 45 %
+  2007-07-25  Glucose, Ur: 110 mg/dL
+  2007-07-25  Platelets: 200 K/µL
 ```
 
 ## FHIR query
 
-The demo calls `GET /Observation` with these parameters:
+Calls `GET /Observation` with:
 
 | Parameter | Value |
 |---|---|
 | `patient` | Patient FHIR ID |
-| `category` | `laboratory` |
+| `category` | `laboratory` (or overridden via `--category`) |
 | `_sort` | `-date` (newest first) |
-| `_count` | `20` |
+| `_count` | `20` (or overridden via `--count`) |
 
-Results are filtered to observations with a `valueQuantity` (numeric results).
+## Observation categories
 
-## Extending the query
-
-To fetch vital signs instead of labs, change `category` to `vital-signs`.  
-To filter by LOINC code, add a `code` parameter, e.g. `code=4548-4` for HbA1c.
+| Value | Description |
+|---|---|
+| `laboratory` | Lab results (CBC, metabolic panel, HbA1c, etc.) |
+| `vital-signs` | Blood pressure, heart rate, weight, etc. |
+| `imaging` | Radiology results |
+| `procedure` | Procedure notes |

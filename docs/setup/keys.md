@@ -5,36 +5,25 @@ Epic backend system apps authenticate using a signed JWT. You generate an RSA ke
 ## Generate the key pair
 
 ```bash
-pixi run python -c "
-from cryptography.hazmat.primitives.asymmetric import rsa
-from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.backends import default_backend
-import json, base64, uuid
-
-key = rsa.generate_private_key(65537, 2048, default_backend())
-
-with open('keys/private_key.pem', 'wb') as f:
-    f.write(key.private_bytes(serialization.Encoding.PEM,
-        serialization.PrivateFormat.PKCS8, serialization.NoEncryption()))
-
-pub = key.public_key().public_numbers()
-def b64(n): return base64.urlsafe_b64encode(n.to_bytes((n.bit_length()+7)//8,'big')).rstrip(b'=').decode()
-
-jwks = {'keys': [{'kty':'RSA','use':'sig','alg':'RS384','kid':str(uuid.uuid4()),'n':b64(pub.n),'e':b64(pub.e)}]}
-with open('keys/public_jwks.json', 'w') as f:
-    json.dump(jwks, f, indent=2)
-print('Done')
-"
+pixi run generate-keys
 ```
 
-This writes two files:
+If keys already exist, you'll be asked before anything is overwritten. To skip the prompt:
 
-| File | Description |
-|---|---|
-| `keys/private_key.pem` | **Keep secret.** Never commit. Signs your JWTs. |
-| `keys/public_jwks.json` | **Host publicly.** Epic fetches this to verify your signatures. |
+```bash
+pixi run generate-keys-force
+```
 
-Both are gitignored by default.
+This writes four files to `keys/`:
+
+| File | Committed | Description |
+|---|---|---|
+| `private_key.pem` | No | Signs JWTs — keep secret, never share |
+| `public_key.pem` | No | PEM form of the public key (reference only) |
+| `public_jwks.json` | Yes | JWKS format — host this at a public URL |
+| `public_jwk.json` | Yes | Single JWK (reference only) |
+
+The command also prints the `kid` (key ID) and next steps.
 
 ## Host the public key
 
@@ -43,7 +32,11 @@ Create a [GitHub Gist](https://gist.github.com):
 1. Filename: `jwks.json`
 2. Paste the contents of `keys/public_jwks.json`
 3. Click **Create public gist** → **Raw**
-4. Copy the raw URL — you'll need it in the next step
+4. Copy the raw URL — you'll need it when registering the app in Epic
 
-!!! warning
-    If you regenerate the key pair, you must update the Gist **and** re-save the JWKS URL in the Epic portal to force Epic to re-fetch the new public key.
+!!! warning "Rotating keys"
+    If you run `generate-keys` again, a new private key is created. You must:
+
+    1. Update your Gist with the new `keys/public_jwks.json`
+    2. Remove and re-add the JWKS URL in the Epic portal
+    3. Click **Save & Ready for Sandbox**
