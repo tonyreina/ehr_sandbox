@@ -6,12 +6,13 @@ platforms = ["linux-64", "win-64", "osx-64", "osx-arm64"]
 version = "0.1.0"
 
 [tasks]
-patient       = "python cli.py patient"
-observations  = "python cli.py observations"
-generate-keys = "python cli.py generate-keys"
+patient            = "python cli.py patient"
+observations       = "python cli.py observations"
+generate-keys      = "python cli.py generate-keys"
 generate-keys-force = "python cli.py generate-keys --force"
-list-patients = "python cli.py list-patients"
-docs          = "zensical serve"
+list-patients      = "python cli.py list-patients"
+list-ehrs          = "python cli.py list-ehrs"
+docs               = "zensical serve"
 
 [dependencies]
 python = ">=3.15.0,<3.16"
@@ -22,3 +23,7 @@ cryptography = ">=50.0.2,<51"
 pyjwt = ">=2.15.1,<3"
 typer = ">=0.27.3,<0.28"
 zensical = ">=0.0.70,<0.0.71"
+hatchling = ">=1.27.0,<2"
+
+[pypi-dependencies]
+epic-fhir-sandbox = { path = ".", editable = true }

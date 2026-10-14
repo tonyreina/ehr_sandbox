@@ -1,0 +1,13 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "epic-fhir-sandbox"
+version = "0.1.0"
+description = "Epic FHIR R4 sandbox demos with a multi-EHR client abstraction layer"
+requires-python = ">=3.15"
+dependencies = []
+
+[tool.hatch.build.targets.wheel]
+packages = ["ehr"]
