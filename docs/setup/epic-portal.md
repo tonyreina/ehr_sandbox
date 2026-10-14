@@ -18,7 +18,13 @@ Search for and add to **Selected**:
 
 ## Register your public key
 
-In the **Non-Production JWK Set URL** field, paste the raw GitHub Gist URL for your `keys/public_jwks.json`. Epic will validate it is reachable and show **Validated**.
+In the **Non-Production JWK Set URL** field, paste:
+
+```
+https://raw.githubusercontent.com/tonyreina/epic-fhir-sandbox/main/keys/public_jwks.json
+```
+
+Epic will validate it is reachable and show **Validated**.
 
 ## Activate for sandbox
 

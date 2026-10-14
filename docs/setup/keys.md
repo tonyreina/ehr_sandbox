@@ -27,16 +27,17 @@ The command also prints the `kid` (key ID) and next steps.
 
 ## Host the public key
 
-Create a [GitHub Gist](https://gist.github.com):
+`keys/public_jwks.json` is committed to the repo and served automatically via GitHub's CDN:
 
-1. Filename: `jwks.json`
-2. Paste the contents of `keys/public_jwks.json`
-3. Click **Create public gist** → **Raw**
-4. Copy the raw URL — you'll need it when registering the app in Epic
+```
+https://raw.githubusercontent.com/tonyreina/epic-fhir-sandbox/main/keys/public_jwks.json
+```
+
+Use this URL when registering the app in Epic. It updates automatically whenever you push new keys — no Gist to maintain.
 
 !!! warning "Rotating keys"
     If you run `generate-keys` again, a new private key is created. You must:
 
-    1. Update your Gist with the new `keys/public_jwks.json`
-    2. Remove and re-add the JWKS URL in the Epic portal
+    1. Commit and push the new `keys/public_jwks.json`
+    2. Remove and re-add the JWKS URL in the Epic portal (forces Epic to re-fetch)
     3. Click **Save & Ready for Sandbox**
