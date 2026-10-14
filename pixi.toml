@@ -1,0 +1,16 @@
+[workspace]
+authors = ["Tony Reina <tbreina@bu.edu>"]
+channels = ["conda-forge"]
+name = "epic_sandbox"
+platforms = ["linux-64"]
+version = "0.1.0"
+
+[tasks]
+
+[dependencies]
+python = ">=3.15.0,<3.16"
+python-dotenv = ">=1.2.4,<2"
+requests = ">=2.34.2,<3"
+fhirclient = ">=4.4.0,<5"
+cryptography = ">=50.0.2,<51"
+pyjwt = ">=2.15.1,<3"

@@ -1,0 +1,17 @@
+# pixi environments
+.pixi/*
+!.pixi/config.toml
+
+# Private keys — never commit
+keys/private_key.pem
+keys/public_key.pem
+
+# Secrets
+.env
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Zensical build output
+site/

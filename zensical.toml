@@ -1,0 +1,22 @@
+[project]
+site_name = "Epic FHIR Sandbox"
+site_description = "Python demos for the Epic FHIR R4 sandbox using backend system authentication."
+site_author = "Tony Reina"
+docs_dir = "docs"
+site_dir = "site"
+use_directory_urls = true
+
+nav = [
+  { "Home" = "index.md" },
+  { "Setup" = [
+    "setup/prerequisites.md",
+    "setup/keys.md",
+    "setup/epic-portal.md",
+  ] },
+  { "Authentication" = "auth.md" },
+  { "Demos" = [
+    "demos/patient.md",
+    "demos/observations.md",
+  ] },
+  { "Reference" = "reference.md" },
+]
