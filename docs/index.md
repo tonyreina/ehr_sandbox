@@ -1,22 +1,27 @@
 # Epic FHIR Sandbox
 
-Python demos for querying the Epic FHIR R4 sandbox using backend system (client credentials) OAuth 2.0 authentication.
+Python demos for querying FHIR R4 servers using backend system (client credentials) OAuth 2.0 authentication.
+
+The project is built around a multi-EHR abstraction layer — swap `EHR_TYPE` in `.env` to target a different server without changing any code.
 
 Based on [FHIR Practical Interoperability](https://www.doctorswhocode.blog/blog/fhir-practical-interoperability/).
 
-## What you can do
+## Supported EHR backends
 
-- **`patient`** — Retrieve patient demographics by name
-- **`observations`** — Query laboratory (or other) observations
-- **`generate-keys`** — Generate a new RSA key pair for Epic auth
-- **`list-patients`** — Show all known sandbox test patients
+| `EHR_TYPE` | Status | Auth |
+|---|---|---|
+| `epic` | Full | JWT client credentials (RS384) |
+| `cerner` | Stub | JWT client credentials (RS384) |
+| `hapi` | Full | None (local dev) |
 
-## Quick start
+## Available commands
 
 ```bash
-pixi run patient camila
-pixi run observations theodore
+pixi run patient [camila|derrick|theodore|linda]
+pixi run observations [name] [--category vital-signs] [--count 10]
 pixi run list-patients
+pixi run list-ehrs
+pixi run generate-keys
 ```
 
-See [Setup → Prerequisites](setup/prerequisites.md) for installation, or [CLI](cli.md) for the full command reference.
+See [Setup → Prerequisites](setup/prerequisites.md) to get started, or [EHR Clients](ehr-clients.md) for the architecture.

@@ -9,8 +9,6 @@
 | macOS Intel | `osx-64` |
 | macOS Apple Silicon | `osx-arm64` |
 
-All platforms are declared in `pixi.toml` — no manual configuration needed.
-
 ## Tools
 
 - **[pixi](https://pixi.sh)** — manages the Python environment and all dependencies.
@@ -27,9 +25,15 @@ All platforms are declared in `pixi.toml` — no manual configuration needed.
 - A **GitHub account** (to host your public JWK Set as a Gist)
 - An **Epic developer account** at [fhir.epic.com](https://fhir.epic.com)
 
-## Python packages
+## Installation
 
-Declared in `pixi.toml`, installed automatically by `pixi install`:
+```bash
+pixi install
+```
+
+This installs all conda-forge packages **and** the `ehr` package itself as an editable install (via `pyproject.toml`), so changes to `ehr/` take effect immediately without reinstalling.
+
+## Python packages
 
 | Package | Purpose |
 |---|---|
@@ -39,7 +43,5 @@ Declared in `pixi.toml`, installed automatically by `pixi install`:
 | `cryptography` | RSA key generation |
 | `typer` | CLI framework |
 | `fhirclient` | FHIR model helpers |
-
-```bash
-pixi install
-```
+| `zensical` | Documentation site generator |
+| `hatchling` | Build backend for the editable install |

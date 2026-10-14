@@ -1,6 +1,6 @@
 # Demo 2: Observations
 
-Queries observations for a patient and prints each result with its date, name, value, and unit.
+Queries observations for a patient via the active EHR client.
 
 ## Usage
 
@@ -17,31 +17,37 @@ pixi run observations [name] [OPTIONS]
 ## Examples
 
 ```bash
-# Lab results for Theodore (default)
-pixi run observations
-
-# Vital signs for Camila
+pixi run observations                              # theodore, laboratory
 pixi run observations camila --category vital-signs
-
-# Last 5 labs for Linda
 pixi run observations linda --count 5
 ```
 
 ## Example output
 
 ```
+EHR: Epic
 Laboratory results for theodore (e63wRTbPfr1p8UW81d8Seiw3):
 
   2006-07-07  Hemoglobin A1C: 7.1 %
   2012-10-19  Hemoglobin: 15.0 g/dL
   2012-10-19  Hematocrit: 45 %
   2007-07-25  Glucose, Ur: 110 mg/dL
-  2007-07-25  Platelets: 200 K/µL
+```
+
+## How it works
+
+`demos/demo_02_observations.py` uses `ClientFactory.from_env()` — the same call regardless of EHR:
+
+```python
+from ehr import ClientFactory
+
+client = ClientFactory.from_env()
+obs    = client.get_observations(patient_id, category=category, count=count)
 ```
 
 ## FHIR query
 
-Calls `GET /Observation` with:
+`GET /Observation` with:
 
 | Parameter | Value |
 |---|---|

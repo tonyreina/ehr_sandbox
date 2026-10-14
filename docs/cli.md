@@ -1,6 +1,10 @@
 # CLI Reference
 
-All commands are available as pixi tasks (recommended) or by running `python cli.py` directly.
+All commands are available as pixi tasks (recommended) or via `python cli.py` directly.
+
+The active EHR backend is selected by `EHR_TYPE` in `.env`. Use `list-ehrs` to confirm which one is active.
+
+---
 
 ## patient
 
@@ -10,12 +14,13 @@ Fetch and display demographics for a sandbox test patient.
 pixi run patient [camila|derrick|theodore|linda]
 ```
 
-Default patient: `camila`.
+Default: `camila`.
 
 **Example:**
 
 ```
 $ pixi run patient derrick
+EHR:     Epic
 Patient: Derrick Lin
 DOB:     1973-06-03
 Gender:  male
@@ -49,7 +54,7 @@ pixi run observations linda --count 5
 
 ## list-patients
 
-Print a table of all known sandbox test patients.
+Print a table of known Epic sandbox test patients.
 
 ```bash
 pixi run list-patients
@@ -63,6 +68,24 @@ derrick      Derrick Lin          1973-06-03   M    eq081-VQEgP8drUUqCWzHfw3
 theodore     Theodore Mychart     1948-07-07   M    e63wRTbPfr1p8UW81d8Seiw3
 linda        Linda Ross           1969-04-27   F    eIXesllypH3M9tAA5WdJftQ3
 ```
+
+---
+
+## list-ehrs
+
+Show all registered EHR backends and which one is active.
+
+```bash
+pixi run list-ehrs
+```
+
+```
+  epic ← active
+  cerner
+  hapi
+```
+
+Change the active backend by setting `EHR_TYPE` in `.env`. See [EHR Clients](ehr-clients.md) for details.
 
 ---
 
@@ -81,21 +104,20 @@ Existing key files found: private_key.pem, public_key.pem, public_jwks.json, pub
 Overwrite? [y/N]
 ```
 
-To skip the prompt (e.g. in CI or scripted rotation):
+To skip the prompt:
 
 ```bash
 pixi run generate-keys-force
-# or
 python cli.py generate-keys --force
 ```
 
-The script lives at `keys/generate_keys.py` and can also be run directly:
+The script also lives at `keys/generate_keys.py` and can be run directly:
 
 ```bash
 python keys/generate_keys.py [--force]
 ```
 
-Writes to `keys/`. See [Generating RSA Keys](setup/keys.md) for details and next steps.
+See [Setup → Keys](setup/keys.md) for next steps after generation.
 
 ---
 

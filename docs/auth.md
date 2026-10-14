@@ -1,6 +1,6 @@
 # Authentication
 
-Epic backend system apps use the **OAuth 2.0 client credentials** flow with a signed JWT assertion. No user login is required.
+Epic backend system apps use the **OAuth 2.0 client credentials** flow with a signed JWT assertion. No user login is required. This is implemented in `ehr/epic.py` (`EpicClient`).
 
 ## Flow
 
@@ -28,15 +28,20 @@ Your app                     Epic token endpoint
 
 The JWT header must include `"kid"` matching a key in your hosted JWKS.
 
-## epic_auth.py
+## Token caching
 
-The `epic_auth.py` module handles token acquisition automatically:
+`EpicClient` caches the access token and only re-fetches it 60 seconds before expiry (tokens are valid for 1 hour). Calling `ClientFactory.from_env()` multiple times within a request does not trigger redundant token requests.
+
+## Using the client
 
 ```python
-from epic_auth import authed_session
+from ehr import ClientFactory
 
-session = authed_session()
-response = session.get(f"{FHIR_BASE}/Patient/{patient_id}")
+client = ClientFactory.from_env()           # reads EHR_TYPE from .env
+patient = client.get_patient("erXuFYUfucBZaryVksYEcMg3")
+obs     = client.get_observations("erXuFYUfucBZaryVksYEcMg3", category="laboratory")
 ```
 
-`authed_session()` returns a `requests.Session` with the `Authorization: Bearer` header pre-set.
+## Adding a new EHR
+
+See [EHR Clients → Adding a new backend](ehr-clients.md#adding-a-new-backend).
