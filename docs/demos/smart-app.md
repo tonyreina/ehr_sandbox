@@ -13,7 +13,7 @@ A browser dashboard for FHIR R4 sandboxes: patient summary, latest vitals, trend
 ```bash
 pixi install
 pixi run smart-app                # http://localhost:8765/index.html (Cerner, no login)
-pixi run smart-app --ehr hapi     # HAPI: your local server if running (hapi-up), else the public one
+pixi run smart-app --ehr hapi     # HAPI: starts your local server, stops it on Ctrl-C (else the public one)
 pixi run smart-app --ehr epic     # Epic: uses your backend app from .env and keys/
 ```
 
