@@ -5,7 +5,7 @@ A browser dashboard for FHIR R4 sandboxes: patient summary, latest vitals, trend
 | EHR | No-login mode | Signed-in mode | Setup |
 |---|---|---|---|
 | **Oracle Health (Cerner)** | yes: the open sandbox | optional (SMART, Provider app launched from code Console) | none for open mode |
-| **HAPI FHIR** | yes: public `hapi.fhir.org`, or your local server | n/a | none |
+| **HAPI FHIR** | yes: your [local server with Synthea patients](../setup/local-hapi.md), else public `hapi.fhir.org` | n/a | none for the public server; Docker for the local one |
 | **Epic** | yes: through a local proxy that uses your backend app | n/a | your existing Backend Systems app (`.env`, `keys/`) |
 
 ## Quick start
@@ -13,7 +13,7 @@ A browser dashboard for FHIR R4 sandboxes: patient summary, latest vitals, trend
 ```bash
 pixi install
 pixi run smart-app                # http://localhost:8765/index.html (Cerner, no login)
-pixi run smart-app --ehr hapi     # HAPI public server, no login
+pixi run smart-app --ehr hapi     # HAPI: your local server if running (hapi-up), else the public one
 pixi run smart-app --ehr epic     # Epic: uses your backend app from .env and keys/
 ```
 
@@ -28,6 +28,10 @@ Oracle Health (Cerner) open sandbox, no login:
 Epic through the local proxy (Epic finds patients by name only together with a birth date):
 
 ![Dashboard on the Epic sandbox via the local proxy](epic_ehr_app.png)
+
+HAPI on your own machine, filled with Synthea patients ([Local HAPI Server](../setup/local-hapi.md)):
+
+![Dashboard on a local HAPI server with Synthea patients](hapi_ehr_app.png)
 
 ## What it shows
 

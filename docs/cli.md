@@ -98,6 +98,18 @@ Change the active backend by setting `EHR_TYPE` in `.env`. See [EHR Clients](ehr
 
 ---
 
+## hapi-up, hapi-down, hapi-load
+
+Run a local HAPI FHIR server in Docker and fill it with synthetic [Synthea](https://github.com/synthetichealth/synthea) patients. See [Local HAPI Server](setup/local-hapi.md).
+
+```bash
+pixi run hapi-up                       # start HAPI at http://localhost:8080/fhir
+pixi run hapi-load [-p 25] [-s 42]     # generate and load Synthea patients
+pixi run hapi-down [--delete-data]     # stop (patients are kept unless --delete-data)
+```
+
+---
+
 ## smart-app
 
 Serve the patient dashboard at `http://localhost:8765/index.html` and open it in your browser. One UI for several EHRs, none needing a login: Cerner and HAPI are open, and Epic goes through a local read-only proxy that signs in with your Backend Systems app (`.env`, `keys/`).

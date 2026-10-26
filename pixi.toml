@@ -15,6 +15,9 @@ list-ehrs          = "python cli.py list-ehrs"
 docs               = "zensical serve"
 smart-setup        = "python cli.py smart-setup"
 smart-app          = "python cli.py smart-app"
+hapi-up            = "python cli.py hapi-up"
+hapi-down          = "python cli.py hapi-down"
+hapi-load          = "python cli.py hapi-load"
 
 [dependencies]
 python = ">=3.15.0,<3.16"

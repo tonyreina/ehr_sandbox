@@ -128,11 +128,7 @@ See [Setup → Epic Portal](setup/epic-portal.md) for app registration.
 
 ### hapi
 
-Unauthenticated client for a local [HAPI FHIR](https://hapifhir.io) server. Useful for development and testing without Epic credentials.
-
-```bash
-docker run -p 8080:8080 hapiproject/hapi:latest
-```
+Unauthenticated client for a local [HAPI FHIR](https://hapifhir.io) server. Useful for development and testing without Epic credentials. `pixi run hapi-up` starts one in Docker and `pixi run hapi-load` fills it with synthetic Synthea patients; see [Local HAPI Server](setup/local-hapi.md).
 
 ```
 EHR_TYPE=hapi

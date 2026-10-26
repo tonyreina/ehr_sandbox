@@ -1,9 +1,10 @@
 """HAPI FHIR client — unauthenticated, for local dev and testing.
 
-Start a local HAPI server with:
-  docker run -p 8080:8080 hapiproject/hapi:latest
+Start a local HAPI server filled with Synthea patients with:
+  pixi run hapi-up
+  pixi run hapi-load
 
-Then set in .env:
+Then set in .env (or pass --ehr hapi):
   EHR_TYPE=hapi
   HAPI_FHIR_BASE=http://localhost:8080/fhir
 """
@@ -54,6 +55,12 @@ class HapiFhirClient(BaseEHRClient):
         })
         r.raise_for_status()
         return [e["resource"] for e in r.json().get("entry", [])]
+
+    def list_patients(self, count: int = 20) -> list[dict]:
+        """First *count* Patient resources on the server (HAPI has no fixed test patients)."""
+        r = self._session.get(f"{self._fhir_base}/Patient", params={"_count": str(count), "_sort": "family"})
+        r.raise_for_status()
+        return [e["resource"] for e in r.json().get("entry", []) if e["resource"].get("resourceType") == "Patient"]
 
     @classmethod
     def from_env(cls) -> "HapiFhirClient":
