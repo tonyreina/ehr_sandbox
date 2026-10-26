@@ -93,7 +93,7 @@ Any other FHIR ID can be passed directly, e.g. `pixi run patient 12724065`. Run 
 ## Project structure
 
 ```
-epic_sandbox/
+ehr_sandbox/
 ├── ehr/                     # multi-EHR client package
 │   ├── base.py              # BaseEHRClient interface
 │   ├── factory.py           # ClientFactory (selects by EHR_TYPE)

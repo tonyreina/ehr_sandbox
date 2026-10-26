@@ -3,9 +3,9 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "epic-fhir-sandbox"
+name = "ehr-sandbox"
 version = "0.1.0"
-description = "Epic FHIR R4 sandbox demos with a multi-EHR client abstraction layer"
+description = "FHIR R4 sandbox demos (Epic, Oracle Health Cerner, HAPI) with a multi-EHR client layer and a browser dashboard"
 requires-python = ">=3.15"
 dependencies = []
 

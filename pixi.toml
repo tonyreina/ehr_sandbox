@@ -1,7 +1,7 @@
 [workspace]
 authors = ["Tony Reina <tbreina@bu.edu>"]
 channels = ["conda-forge"]
-name = "epic_sandbox"
+name = "ehr_sandbox"
 platforms = ["linux-64", "win-64", "osx-64", "osx-arm64"]
 version = "0.1.0"
 
@@ -28,4 +28,4 @@ zensical = ">=0.0.70,<0.0.71"
 hatchling = ">=1.27.0,<2"
 
 [pypi-dependencies]
-epic-fhir-sandbox = { path = ".", editable = true }
+ehr-sandbox = { path = ".", editable = true }

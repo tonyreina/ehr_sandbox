@@ -21,7 +21,7 @@ Search for and add to **Selected**:
 In the **Non-Production JWK Set URL** field, paste:
 
 ```
-https://raw.githubusercontent.com/tonyreina/epic-fhir-sandbox/main/keys/public_jwks.json
+https://raw.githubusercontent.com/tonyreina/ehr_sandbox/main/keys/public_jwks.json
 ```
 
 Epic will validate it is reachable and show **Validated**.

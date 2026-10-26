@@ -41,7 +41,7 @@ flowchart LR
 `keys/public_jwks.json` is committed to the repo and served automatically via GitHub's CDN:
 
 ```
-https://raw.githubusercontent.com/tonyreina/epic-fhir-sandbox/main/keys/public_jwks.json
+https://raw.githubusercontent.com/tonyreina/ehr_sandbox/main/keys/public_jwks.json
 ```
 
 Use this URL when registering the app in Epic. It updates automatically whenever you push new keys — no Gist to maintain.
