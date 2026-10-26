@@ -37,7 +37,7 @@ pixi run smart-app --ehr epic
 
 The startup line says `Epic: via local proxy using your backend app` when the configuration is found. You can also pick **Epic** from the EHR dropdown at any time.
 
-- **Patients:** the picker lists the Epic test patients (Camila Lopez, Derrick Lin, Theodore Mychart, Linda Ross).
+- **Patients:** the picker lists the Epic test patients (Camila Lopez, Derrick Lin, Theodore Mychart, Linda Ross, Warren McGinnis, Desiree Powell, Elijah Davis, Jason Argonaut).
 - **Search:** Epic only finds patients by **name together with a birth date** (for example `lin` and `1973-06-03`), so the search box has a date field for Epic.
 - **Sections:** your backend app has the Patient and Observation APIs, so the summary, vitals and labs load. Medications, allergies, encounters and problems show *Not authorized* until you add their APIs to the backend app (MedicationRequest, AllergyIntolerance, Encounter and Condition search, R4) and they reach the sandbox, which can take up to about an hour.
 
@@ -53,7 +53,7 @@ The startup line says `Epic: via local proxy using your backend app` when the co
 | Symptom | Cause and fix |
 |---|---|
 | *Epic isn't configured* | `.env` lacks an `EPIC_*` value or `keys/` lacks the key files. Run `pixi run smart-setup --ehr epic` to check, and see [Epic Portal](epic-portal.md). |
-| Sections show *Epic request failed* (502) | The token request failed. Run `pixi run patient camila` with `EHR_TYPE=epic`; it uses the same credentials and shows the full error. A JWKS hosted as a Gist causes `invalid_client`. |
+| Sections show *Epic request failed* (502) | The token request failed. Run `pixi run patient camila --ehr epic`; it uses the same credentials and shows the full error. A JWKS hosted as a Gist causes `invalid_client`. |
 | *Not authorized* in a section | That resource's API isn't on your backend app yet. |
 | Search finds nothing | Add the birth date; Epic needs name plus birth date. |
 | Epic's login page says **Invalid OAuth 2.0 request.** | A Backend Systems client ID was used for a browser login. The dashboard no longer does that; if you see it, you are on an old version of `smart-app/`. |

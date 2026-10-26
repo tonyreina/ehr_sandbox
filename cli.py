@@ -17,9 +17,28 @@ SMART_BASE = f"http://localhost:{SMART_PORT}"
 CODE_CONSOLE = "https://code-console.cerner.com/"
 CERNER_TENANT = "ec2458f2-1e24-41c8-b71b-0e701af7583d"
 
-def _ehr_type() -> str:
-    return os.getenv("EHR_TYPE", "epic").lower()
+_ehr_override: Optional[str] = None     # set by --ehr; wins over EHR_TYPE in .env
 
+
+def _ehr_type() -> str:
+    return _ehr_override or os.getenv("EHR_TYPE", "epic").lower()
+
+
+def _use_ehr(ehr: Optional[str]) -> None:
+    """Apply --ehr for this run (validated against the registered backends)."""
+    global _ehr_override
+    if ehr is None:
+        return
+    from ehr import ClientFactory
+    if ehr.lower() not in ClientFactory.available():
+        raise typer.BadParameter(f"--ehr must be one of: {', '.join(ClientFactory.available())}")
+    _ehr_override = ehr.lower()
+
+
+EhrOption = Annotated[
+    Optional[str],
+    typer.Option("--ehr", help="epic, cerner or hapi (default: EHR_TYPE in .env)"),
+]
 
 PatientArg = Annotated[
     Optional[str],
@@ -29,7 +48,7 @@ PatientArg = Annotated[
 
 def _client():
     from ehr import ClientFactory
-    return ClientFactory.from_env()
+    return ClientFactory.from_env(_ehr_type())
 
 
 def _resolve(name: Optional[str], observations: bool = False) -> tuple[str, str]:
@@ -43,8 +62,10 @@ def _resolve(name: Optional[str], observations: bool = False) -> tuple[str, str]
 @app.command()
 def patient(
     name: PatientArg = None,
+    ehr:  EhrOption = None,
 ):
     """Fetch and display patient demographics."""
+    _use_ehr(ehr)
     client     = _client()
     _, patient_id = _resolve(name)
     p          = client.get_patient(patient_id)
@@ -62,24 +83,33 @@ def observations(
     name:     PatientArg = None,
     category: Annotated[str, typer.Option(help="Observation category")] = "laboratory",
     count:    Annotated[int, typer.Option("--count", "-n", help="Max results")] = 20,
+    ehr:      EhrOption = None,
 ):
     """Fetch and display observations for a patient."""
+    _use_ehr(ehr)
     client     = _client()
     label, patient_id = _resolve(name, observations=True)
-    obs        = client.get_observations(patient_id, category=category, count=count)
-
-    if not obs:
-        typer.echo("No observations found.")
-        return
+    obs        = [o for o in client.get_observations(patient_id, category=category, count=count)
+                  if o.get("resourceType") == "Observation"]       # Epic adds an OperationOutcome entry
 
     typer.echo(f"EHR: {client.ehr_name}")
     typer.echo(f"{category.capitalize()} results for {label} ({patient_id}):\n")
+    shown = 0
     for o in obs:
-        code  = o.get("code", {}).get("text", "Unknown")
-        date  = o.get("effectiveDateTime", "")[:10]
+        code = o.get("code", {}).get("text", "Unknown")
+        date = o.get("effectiveDateTime", "")[:10]
         value = o.get("valueQuantity")
         if value:
             typer.echo(f"  {date}  {code}: {value.get('value')} {value.get('unit', '')}")
+            shown += 1
+        elif o.get("component"):                                   # e.g. blood pressure
+            parts = [f"{c.get('code', {}).get('text', '?')} {c['valueQuantity'].get('value')}"
+                     for c in o["component"] if c.get("valueQuantity")]
+            if parts:
+                typer.echo(f"  {date}  {code}: {', '.join(parts)}")
+                shown += 1
+    if not shown:
+        typer.echo(f"  No {category} results with a numeric value for this patient in the sandbox.")
 
 
 @app.command("generate-keys")
@@ -94,8 +124,9 @@ def generate_keys(
 
 
 @app.command("list-patients")
-def list_patients():
+def list_patients(ehr: EhrOption = None):
     """List known sandbox test patients for the active EHR."""
+    _use_ehr(ehr)
     from ehr.patients import patients_for
     header = f"{'Key':<12} {'Name':<20} {'DOB':<12} {'Sex'}  {'FHIR ID'}"
     patients = patients_for(_ehr_type())
@@ -109,8 +140,9 @@ def list_patients():
 
 
 @app.command("list-ehrs")
-def list_ehrs():
+def list_ehrs(ehr: EhrOption = None):
     """List registered EHR backends."""
+    _use_ehr(ehr)
     from ehr import ClientFactory
     current = _ehr_type()
     for name in ClientFactory.available():

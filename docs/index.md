@@ -35,8 +35,8 @@ flowchart LR
 ## Available commands
 
 ```bash
-pixi run patient [name]            # keys depend on EHR_TYPE
-pixi run observations [name] [--category vital-signs] [--count 10]
+pixi run patient [name]            # keys depend on EHR_TYPE (or --ehr epic|cerner|hapi)
+pixi run observations [name] [--category vital-signs] [--count 10] [--ehr epic|cerner|hapi]
 pixi run list-patients
 pixi run list-ehrs
 pixi run generate-keys

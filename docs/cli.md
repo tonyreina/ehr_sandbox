@@ -2,7 +2,7 @@
 
 All commands are available as pixi tasks (recommended) or via `python cli.py` directly.
 
-The active EHR backend is selected by `EHR_TYPE` in `.env`. Use `list-ehrs` to confirm which one is active.
+The active EHR backend is selected by `EHR_TYPE` in `.env`. Use `list-ehrs` to confirm which one is active. `patient`, `observations`, `list-patients` and `list-ehrs` also take `--ehr epic|cerner|hapi` to use a different backend for one run without editing `.env` (the shell's `EHR_TYPE` does not override `.env`).
 
 ---
 
@@ -11,7 +11,7 @@ The active EHR backend is selected by `EHR_TYPE` in `.env`. Use `list-ehrs` to c
 Fetch and display demographics for a sandbox test patient.
 
 ```bash
-pixi run patient [name]
+pixi run patient [name] [--ehr epic|cerner|hapi]
 ```
 
 `name` is a test-patient key for the active EHR (see `list-patients`) or a raw FHIR id. Default: `camila` (Epic), `nancy` (Cerner).
@@ -19,7 +19,7 @@ pixi run patient [name]
 **Example:**
 
 ```
-$ pixi run patient derrick
+$ pixi run patient derrick --ehr epic
 EHR:     Epic
 Patient: Derrick Lin
 DOB:     1973-06-03
@@ -41,14 +41,18 @@ pixi run observations [name] [OPTIONS]   # default: theodore (Epic), joe (Cerner
 |---|---|---|
 | `--category` | `laboratory` | Observation category (`vital-signs`, `imaging`, etc.) |
 | `--count`, `-n` | `20` | Maximum number of results |
+| `--ehr` | `EHR_TYPE` | Backend for this run: `epic`, `cerner` or `hapi` |
 
 **Examples:**
 
 ```bash
 pixi run observations theodore
 pixi run observations camila --category vital-signs
-pixi run observations linda --count 5
+pixi run observations camila --count 5
+pixi run observations nancy --ehr cerner --category vital-signs --count 5
 ```
+
+Sandbox data is sparse and differs per patient (for example `linda` has no laboratory results on Epic, and `elijah` and `jason` have no vitals or labs at all); when nothing is printable the command says so. Only observations with a numeric value, or blood-pressure components, are printed.
 
 ---
 
@@ -57,7 +61,7 @@ pixi run observations linda --count 5
 Print a table of known test patients for the active `EHR_TYPE`.
 
 ```bash
-pixi run list-patients
+pixi run list-patients [--ehr epic|cerner|hapi]
 ```
 
 ```
@@ -67,6 +71,10 @@ camila       Camila Lopez         1987-09-12   F    erXuFYUfucBZaryVksYEcMg3
 derrick      Derrick Lin          1973-06-03   M    eq081-VQEgP8drUUqCWzHfw3
 theodore     Theodore Mychart     1948-07-07   M    e63wRTbPfr1p8UW81d8Seiw3
 linda        Linda Ross           1969-04-27   F    eIXesllypH3M9tAA5WdJftQ3
+warren       Warren McGinnis      1952-05-24   M    e0w0LEDCYtfckT6N.CkJKCw3
+desiree      Desiree Powell       2014-11-14   F    eAB3mDIBBcyUKviyzrxsnAw3
+elijah       Elijah Davis         1993-08-18   M    egqBHVfQlt4Bw3XGXoxVxHg3
+jason        Jason Argonaut       1985-08-01   M    eD.LxhDyX35TntF77l7etUA3
 ```
 
 ---

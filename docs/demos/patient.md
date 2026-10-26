@@ -8,7 +8,7 @@ Fetches a patient record via the active EHR client and prints name, DOB, and gen
 pixi run patient [name]
 ```
 
-`name` is a test-patient key for the active EHR or a raw FHIR id. Defaults to `camila` on Epic and `nancy` on Cerner. The EHR backend is determined by `EHR_TYPE` in `.env`.
+`name` is a test-patient key for the active EHR or a raw FHIR id. Defaults to `camila` on Epic and `nancy` on Cerner. The EHR backend is determined by `EHR_TYPE` in `.env`, or by `--ehr epic|cerner|hapi` for a single run (for example `pixi run patient nancy --ehr cerner`).
 
 ## Example output
 
@@ -30,6 +30,10 @@ Run `pixi run list-patients` for the full table.
 | `derrick` | Derrick Lin | 1973-06-03 | M | `eq081-VQEgP8drUUqCWzHfw3` |
 | `theodore` | Theodore Mychart | 1948-07-07 | M | `e63wRTbPfr1p8UW81d8Seiw3` |
 | `linda` | Linda Ross | 1969-04-27 | F | `eIXesllypH3M9tAA5WdJftQ3` |
+| `warren` | Warren McGinnis | 1952-05-24 | M | `e0w0LEDCYtfckT6N.CkJKCw3` |
+| `desiree` | Desiree Powell | 2014-11-14 | F | `eAB3mDIBBcyUKviyzrxsnAw3` |
+| `elijah` | Elijah Davis | 1993-08-18 | M | `egqBHVfQlt4Bw3XGXoxVxHg3` |
+| `jason` | Jason Argonaut | 1985-08-01 | M | `eD.LxhDyX35TntF77l7etUA3` |
 
 ## Known sandbox patients (Cerner)
 

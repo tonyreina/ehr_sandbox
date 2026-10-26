@@ -9,6 +9,10 @@ PATIENTS: dict[str, dict[str, tuple[str, str, str, str]]] = {
         "derrick":  ("eq081-VQEgP8drUUqCWzHfw3",  "Derrick Lin",      "1973-06-03", "M"),
         "theodore": ("e63wRTbPfr1p8UW81d8Seiw3",  "Theodore Mychart", "1948-07-07", "M"),
         "linda":    ("eIXesllypH3M9tAA5WdJftQ3",  "Linda Ross",       "1969-04-27", "F"),
+        "warren":   ("e0w0LEDCYtfckT6N.CkJKCw3",  "Warren McGinnis",  "1952-05-24", "M"),
+        "desiree":  ("eAB3mDIBBcyUKviyzrxsnAw3",  "Desiree Powell",   "2014-11-14", "F"),
+        "elijah":   ("egqBHVfQlt4Bw3XGXoxVxHg3",  "Elijah Davis",     "1993-08-18", "M"),
+        "jason":    ("eD.LxhDyX35TntF77l7etUA3",  "Jason Argonaut",   "1985-08-01", "M"),
     },
     "cerner": {
         "nancy": ("12724066", "Nancy Patchtest", "1990-01-02", "F"),
@@ -41,4 +45,11 @@ def resolve(ehr_type: str, key: str | None, *, observations: bool = False) -> tu
         if defaults is None:
             raise ValueError(f"No default patient for EHR_TYPE={ehr_type!r}; pass a FHIR id.")
         key = defaults[1 if observations else 0]
+    if key not in table:
+        owners = [e for e, t in PATIENTS.items() if e != ehr_type and key in t]
+        if owners:
+            raise ValueError(
+                f"{key!r} is a test patient for {' / '.join(owners)}, not {ehr_type!r}. "
+                f"Use --ehr {owners[0]} (or set EHR_TYPE in .env), or pass a raw FHIR id."
+            )
     return key, table[key][0] if key in table else key
