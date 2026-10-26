@@ -22,7 +22,7 @@ ID:      erXuFYUfucBZaryVksYEcMg3
 
 ## Known sandbox patients (Epic)
 
-Run `pixi run list-patients` for the full table.
+Run `pixi run list-patients --ehr epic` for the full table.
 
 | Key | Name | DOB | Sex | FHIR ID |
 |---|---|---|---|---|
