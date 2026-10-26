@@ -52,7 +52,7 @@ pixi run observations camila --count 5
 pixi run observations nancy --ehr cerner --category vital-signs --count 5
 ```
 
-Sandbox data is sparse and differs per patient (for example `linda` has no laboratory results on Epic); when nothing is printable the command says so. Only observations with a numeric value, or blood-pressure components, are printed.
+Sandbox data is sparse and differs per patient (for example `linda` has no laboratory results on Epic, and `elijah` and `jason` have no vitals or labs at all); when nothing is printable the command says so. Only observations with a numeric value, or blood-pressure components, are printed.
 
 ---
 
@@ -72,6 +72,9 @@ derrick      Derrick Lin          1973-06-03   M    eq081-VQEgP8drUUqCWzHfw3
 theodore     Theodore Mychart     1948-07-07   M    e63wRTbPfr1p8UW81d8Seiw3
 linda        Linda Ross           1969-04-27   F    eIXesllypH3M9tAA5WdJftQ3
 warren       Warren McGinnis      1952-05-24   M    e0w0LEDCYtfckT6N.CkJKCw3
+desiree      Desiree Powell       2014-11-14   F    eAB3mDIBBcyUKviyzrxsnAw3
+elijah       Elijah Davis         1993-08-18   M    egqBHVfQlt4Bw3XGXoxVxHg3
+jason        Jason Argonaut       1985-08-01   M    eD.LxhDyX35TntF77l7etUA3
 ```
 
 ---

@@ -10,6 +10,9 @@ PATIENTS: dict[str, dict[str, tuple[str, str, str, str]]] = {
         "theodore": ("e63wRTbPfr1p8UW81d8Seiw3",  "Theodore Mychart", "1948-07-07", "M"),
         "linda":    ("eIXesllypH3M9tAA5WdJftQ3",  "Linda Ross",       "1969-04-27", "F"),
         "warren":   ("e0w0LEDCYtfckT6N.CkJKCw3",  "Warren McGinnis",  "1952-05-24", "M"),
+        "desiree":  ("eAB3mDIBBcyUKviyzrxsnAw3",  "Desiree Powell",   "2014-11-14", "F"),
+        "elijah":   ("egqBHVfQlt4Bw3XGXoxVxHg3",  "Elijah Davis",     "1993-08-18", "M"),
+        "jason":    ("eD.LxhDyX35TntF77l7etUA3",  "Jason Argonaut",   "1985-08-01", "M"),
     },
     "cerner": {
         "nancy": ("12724066", "Nancy Patchtest", "1990-01-02", "F"),

@@ -50,6 +50,9 @@ window.SMART_CONFIG = {
         { id: "e63wRTbPfr1p8UW81d8Seiw3", label: "Theodore Mychart" },
         { id: "eIXesllypH3M9tAA5WdJftQ3", label: "Linda Ross" },
         { id: "e0w0LEDCYtfckT6N.CkJKCw3", label: "Warren McGinnis" },
+        { id: "eAB3mDIBBcyUKviyzrxsnAw3", label: "Desiree Powell" },
+        { id: "egqBHVfQlt4Bw3XGXoxVxHg3", label: "Elijah Davis" },
+        { id: "eD.LxhDyX35TntF77l7etUA3", label: "Jason Argonaut" },
       ],
     },
 
