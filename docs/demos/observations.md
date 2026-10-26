@@ -19,7 +19,7 @@ pixi run observations [name] [OPTIONS]
 
 ```bash
 pixi run observations                              # theodore, laboratory
-pixi run observations linda --category vital-signs
+pixi run observations camila --category vital-signs
 pixi run observations camila --count 5
 pixi run observations nancy --ehr cerner --category vital-signs --count 5
 ```

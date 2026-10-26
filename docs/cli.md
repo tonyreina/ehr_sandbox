@@ -47,7 +47,7 @@ pixi run observations [name] [OPTIONS]   # default: theodore (Epic), joe (Cerner
 
 ```bash
 pixi run observations theodore
-pixi run observations linda --category vital-signs
+pixi run observations camila --category vital-signs
 pixi run observations camila --count 5
 pixi run observations nancy --ehr cerner --category vital-signs --count 5
 ```
