@@ -33,7 +33,7 @@ Run `pixi run list-patients` for the full table.
 | `warren` | Warren McGinnis | 1952-05-24 | M | `e0w0LEDCYtfckT6N.CkJKCw3` |
 | `desiree` | Desiree Powell | 2014-11-14 | F | `eAB3mDIBBcyUKviyzrxsnAw3` |
 | `elijah` | Elijah Davis | 1993-08-18 | M | `egqBHVfQlt4Bw3XGXoxVxHg3` |
-| `jason` | Jason Argonaut | 1985-08-01 | M | `eD.LxhDyX35TntF77l7etUA3` |
+| `olivia` | Olivia Roberts | 2003-01-07 | F | `eh2xYHuzl9nkSFVvV3osUHg3` |
 
 ## Known sandbox patients (Cerner)
 

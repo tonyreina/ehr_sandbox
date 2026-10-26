@@ -12,7 +12,7 @@ PATIENTS: dict[str, dict[str, tuple[str, str, str, str]]] = {
         "warren":   ("e0w0LEDCYtfckT6N.CkJKCw3",  "Warren McGinnis",  "1952-05-24", "M"),
         "desiree":  ("eAB3mDIBBcyUKviyzrxsnAw3",  "Desiree Powell",   "2014-11-14", "F"),
         "elijah":   ("egqBHVfQlt4Bw3XGXoxVxHg3",  "Elijah Davis",     "1993-08-18", "M"),
-        "jason":    ("eD.LxhDyX35TntF77l7etUA3",  "Jason Argonaut",   "1985-08-01", "M"),
+        "olivia":   ("eh2xYHuzl9nkSFVvV3osUHg3",  "Olivia Roberts",   "2003-01-07", "F"),
     },
     "cerner": {
         "nancy": ("12724066", "Nancy Patchtest", "1990-01-02", "F"),
