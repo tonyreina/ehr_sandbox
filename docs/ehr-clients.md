@@ -103,6 +103,12 @@ pixi run list-ehrs   # shows active backend
 pixi run patient camila
 ```
 
+Or pick the backend for a single command with `--ehr`, leaving `.env` alone:
+
+```bash
+pixi run patient nancy --ehr cerner
+```
+
 ## Supported backends
 
 ### epic

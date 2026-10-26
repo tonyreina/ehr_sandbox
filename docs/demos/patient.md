@@ -8,7 +8,7 @@ Fetches a patient record via the active EHR client and prints name, DOB, and gen
 pixi run patient [name]
 ```
 
-`name` is a test-patient key for the active EHR or a raw FHIR id. Defaults to `camila` on Epic and `nancy` on Cerner. The EHR backend is determined by `EHR_TYPE` in `.env`.
+`name` is a test-patient key for the active EHR or a raw FHIR id. Defaults to `camila` on Epic and `nancy` on Cerner. The EHR backend is determined by `EHR_TYPE` in `.env`, or by `--ehr epic|cerner|hapi` for a single run (for example `pixi run patient nancy --ehr cerner`).
 
 ## Example output
 

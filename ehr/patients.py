@@ -41,4 +41,11 @@ def resolve(ehr_type: str, key: str | None, *, observations: bool = False) -> tu
         if defaults is None:
             raise ValueError(f"No default patient for EHR_TYPE={ehr_type!r}; pass a FHIR id.")
         key = defaults[1 if observations else 0]
+    if key not in table:
+        owners = [e for e, t in PATIENTS.items() if e != ehr_type and key in t]
+        if owners:
+            raise ValueError(
+                f"{key!r} is a test patient for {' / '.join(owners)}, not {ehr_type!r}. "
+                f"Use --ehr {owners[0]} (or set EHR_TYPE in .env), or pass a raw FHIR id."
+            )
     return key, table[key][0] if key in table else key

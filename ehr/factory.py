@@ -16,10 +16,10 @@ class ClientFactory:
         return decorator
 
     @classmethod
-    def from_env(cls) -> BaseEHRClient:
-        """Return a client for the EHR named in EHR_TYPE (default: epic)."""
+    def from_env(cls, ehr_type: str | None = None) -> BaseEHRClient:
+        """Return a client for *ehr_type*, else the EHR named in EHR_TYPE (default: epic)."""
         load_dotenv(override=True)
-        ehr_type = os.getenv("EHR_TYPE", "epic").lower()
+        ehr_type = (ehr_type or os.getenv("EHR_TYPE", "epic")).lower()
         if ehr_type not in cls._registry:
             available = ", ".join(cls._registry)
             raise ValueError(

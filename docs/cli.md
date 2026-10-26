@@ -2,7 +2,7 @@
 
 All commands are available as pixi tasks (recommended) or via `python cli.py` directly.
 
-The active EHR backend is selected by `EHR_TYPE` in `.env`. Use `list-ehrs` to confirm which one is active.
+The active EHR backend is selected by `EHR_TYPE` in `.env`. Use `list-ehrs` to confirm which one is active. `patient`, `observations`, `list-patients` and `list-ehrs` also take `--ehr epic|cerner|hapi` to use a different backend for one run without editing `.env` (the shell's `EHR_TYPE` does not override `.env`).
 
 ---
 
@@ -11,7 +11,7 @@ The active EHR backend is selected by `EHR_TYPE` in `.env`. Use `list-ehrs` to c
 Fetch and display demographics for a sandbox test patient.
 
 ```bash
-pixi run patient [name]
+pixi run patient [name] [--ehr epic|cerner|hapi]
 ```
 
 `name` is a test-patient key for the active EHR (see `list-patients`) or a raw FHIR id. Default: `camila` (Epic), `nancy` (Cerner).
@@ -19,7 +19,7 @@ pixi run patient [name]
 **Example:**
 
 ```
-$ pixi run patient derrick
+$ pixi run patient derrick --ehr epic
 EHR:     Epic
 Patient: Derrick Lin
 DOB:     1973-06-03
@@ -41,14 +41,18 @@ pixi run observations [name] [OPTIONS]   # default: theodore (Epic), joe (Cerner
 |---|---|---|
 | `--category` | `laboratory` | Observation category (`vital-signs`, `imaging`, etc.) |
 | `--count`, `-n` | `20` | Maximum number of results |
+| `--ehr` | `EHR_TYPE` | Backend for this run: `epic`, `cerner` or `hapi` |
 
 **Examples:**
 
 ```bash
 pixi run observations theodore
-pixi run observations camila --category vital-signs
-pixi run observations linda --count 5
+pixi run observations linda --category vital-signs
+pixi run observations camila --count 5
+pixi run observations nancy --ehr cerner --category vital-signs --count 5
 ```
+
+Sandbox data is sparse and differs per patient: a patient/category pair can return no printable results (for example `camila` has no vital signs on Epic). Only observations with a numeric value are printed.
 
 ---
 
@@ -57,7 +61,7 @@ pixi run observations linda --count 5
 Print a table of known test patients for the active `EHR_TYPE`.
 
 ```bash
-pixi run list-patients
+pixi run list-patients [--ehr epic|cerner|hapi]
 ```
 
 ```
