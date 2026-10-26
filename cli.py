@@ -89,20 +89,27 @@ def observations(
     _use_ehr(ehr)
     client     = _client()
     label, patient_id = _resolve(name, observations=True)
-    obs        = client.get_observations(patient_id, category=category, count=count)
-
-    if not obs:
-        typer.echo("No observations found.")
-        return
+    obs        = [o for o in client.get_observations(patient_id, category=category, count=count)
+                  if o.get("resourceType") == "Observation"]       # Epic adds an OperationOutcome entry
 
     typer.echo(f"EHR: {client.ehr_name}")
     typer.echo(f"{category.capitalize()} results for {label} ({patient_id}):\n")
+    shown = 0
     for o in obs:
-        code  = o.get("code", {}).get("text", "Unknown")
-        date  = o.get("effectiveDateTime", "")[:10]
+        code = o.get("code", {}).get("text", "Unknown")
+        date = o.get("effectiveDateTime", "")[:10]
         value = o.get("valueQuantity")
         if value:
             typer.echo(f"  {date}  {code}: {value.get('value')} {value.get('unit', '')}")
+            shown += 1
+        elif o.get("component"):                                   # e.g. blood pressure
+            parts = [f"{c.get('code', {}).get('text', '?')} {c['valueQuantity'].get('value')}"
+                     for c in o["component"] if c.get("valueQuantity")]
+            if parts:
+                typer.echo(f"  {date}  {code}: {', '.join(parts)}")
+                shown += 1
+    if not shown:
+        typer.echo(f"  No {category} results with a numeric value for this patient in the sandbox.")
 
 
 @app.command("generate-keys")

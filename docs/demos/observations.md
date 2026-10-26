@@ -24,7 +24,7 @@ pixi run observations camila --count 5
 pixi run observations nancy --ehr cerner --category vital-signs --count 5
 ```
 
-Sandbox data differs per patient, so some patient/category pairs print nothing (for example `camila` has no vital signs on Epic). Only observations with a numeric value are printed.
+Sandbox data is sparse and differs per patient (for example `linda` has no laboratory results on Epic); when nothing is printable the command says so. Only observations with a numeric value, or blood-pressure components, are printed.
 
 ## Example output
 
