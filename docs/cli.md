@@ -119,7 +119,10 @@ pixi run smart-app                    # EHR from EHR_TYPE (else Cerner)
 pixi run smart-app --ehr hapi         # cerner | epic | hapi
 python cli.py smart-app --no-open     # don't open a browser
 python cli.py smart-app --console     # also open the EHR's developer portal
+pixi run smart-app --ehr hapi --keep-hapi   # leave the local HAPI server running on exit
 ```
+
+With `--ehr hapi` the local HAPI server ([Local HAPI Server](setup/local-hapi.md)) is started if needed and stopped on Ctrl-C.
 
 `--ehr` is only the starting point; the page has an EHR dropdown. See [Demo 3](demos/smart-app.md).
 

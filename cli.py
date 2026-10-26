@@ -362,12 +362,16 @@ def smart_app(
     ehr: Annotated[Optional[str], typer.Option("--ehr", help="cerner, epic or hapi (default: EHR_TYPE, else cerner)")] = None,
     open_browser: Annotated[bool, typer.Option("--open/--no-open", help="Open the dashboard in your browser")] = True,
     console: Annotated[bool, typer.Option("--console", help="Also open the EHR's developer portal")] = False,
+    keep_hapi: Annotated[bool, typer.Option("--keep-hapi", help="With --ehr hapi: leave the local HAPI server running on exit")] = False,
 ):
     """Serve the patient dashboard on localhost.
 
     Cerner and HAPI work immediately with no login. Epic works through a local,
     read-only proxy that signs in with your Backend Systems app (.env + keys/).
     The page also has an EHR dropdown, so --ehr only sets the starting point.
+
+    With --ehr hapi the local HAPI server (`hapi-up`) is started if it is not running and
+    stopped again on Ctrl-C (patients are kept); --keep-hapi leaves it running.
     """
     import functools
     import webbrowser
@@ -379,6 +383,18 @@ def smart_app(
 
     import json
     import threading
+
+    from ehr import hapi_local
+    hapi_started = False                # True when this run started the local HAPI container
+    if ehr == "hapi" and not os.getenv("HAPI_FHIR_BASE") and not hapi_local.ready():
+        typer.echo("Starting the local HAPI server (first start pulls the image)...")
+        try:
+            hapi_local.up()
+            hapi_started = True
+            if not hapi_local.patient_count():
+                typer.echo("The local HAPI server is empty. Run `pixi run hapi-load` to add Synthea patients.")
+        except Exception as e:
+            typer.echo(f"Could not start the local HAPI server ({e}); the dashboard will use the public HAPI server.", err=True)
 
     epic_ready = _epic_backend_ready()
     # The dashboard's HAPI profile uses HAPI_FHIR_BASE from .env, else the local server when it is
@@ -454,6 +470,11 @@ def smart_app(
         server.serve_forever()
     except KeyboardInterrupt:
         typer.echo("\nStopped.")
+    finally:
+        # --ehr hapi owns the local server for this session: stop it (data is kept) unless asked not to.
+        if ehr == "hapi" and not keep_hapi and not os.getenv("HAPI_FHIR_BASE") and (hapi_started or hapi_local.ready()):
+            typer.echo("Stopping the local HAPI server (patients are kept; `pixi run hapi-up` restarts it)...")
+            hapi_local.down()
 
 
 if __name__ == "__main__":

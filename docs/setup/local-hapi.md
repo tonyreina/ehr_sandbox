@@ -40,6 +40,8 @@ pixi run observations <fhir-id> --ehr hapi --category vital-signs
 pixi run smart-app --ehr hapi                  # the dashboard, on your local data
 ```
 
+`smart-app --ehr hapi` manages the local server for you: it starts HAPI if it isn't running and **stops it again on Ctrl-C** (patients are kept). Add `--keep-hapi` to leave it running. Other EHRs (`--ehr cerner`, `--ehr epic`) never touch the local server, and nothing is started or stopped when `HAPI_FHIR_BASE` in `.env` points at a server of your own.
+
 HAPI has no fixed test patients, so the commands use the server's own patients (`list-patients` shows them).
 
 `pixi run smart-app` uses the local server for the HAPI profile whenever it is running, else the public `hapi.fhir.org` test server. To point the Python commands and the dashboard at a different server, set it in `.env`:
