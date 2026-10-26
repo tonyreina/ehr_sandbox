@@ -17,9 +17,11 @@ flowchart LR
     F -->|EHR_TYPE=hapi| HA[HapiFhirClient]
     EP -->|"JWT client credentials"| EPIC[(Epic sandbox)]
     CE -->|"no auth"| CERN[(Cerner open sandbox)]
-    HA -->|"no auth"| HAPI[(Local HAPI server)]
-    DASH["pixi run smart-app (browser dashboard)"] -->|"open mode, no login"| CERN
-    DASH -.->|"optional signed-in SMART"| CERNS[(Cerner secured sandbox)]
+    HA -->|"no auth"| HAPI[("HAPI server (local or public)")]
+    DASH["pixi run smart-app (browser dashboard)"] -->|"no login"| CERN
+    DASH -->|"no login"| HAPI
+    DASH -.->|"optional SMART sign-in"| CERNS[(Cerner secured sandbox)]
+    DASH -->|"SMART sign-in (automatic)"| EPICS[("Epic sandbox (SMART)")]
 ```
 
 ## Supported EHR backends
@@ -38,8 +40,8 @@ pixi run observations [name] [--category vital-signs] [--count 10]
 pixi run list-patients
 pixi run list-ehrs
 pixi run generate-keys
-pixi run smart-app        # patient dashboard on localhost (Cerner open sandbox, no login)
-pixi run smart-setup      # optional: signed-in SMART session setup
+pixi run smart-app        # patient dashboard on localhost: --ehr cerner | epic | hapi
+pixi run smart-setup      # register for a signed-in SMART session: --ehr cerner | epic
 ```
 
 See [Setup → Prerequisites](setup/prerequisites.md) to get started, or [EHR Clients](ehr-clients.md) for the architecture.

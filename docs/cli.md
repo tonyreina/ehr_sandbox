@@ -91,25 +91,27 @@ Change the active backend by setting `EHR_TYPE` in `.env`. See [EHR Clients](ehr
 
 ## smart-app
 
-Serve the patient dashboard at `http://localhost:8765/index.html` and open it in your browser. Works with no setup against the Cerner open sandbox.
+Serve the patient dashboard at `http://localhost:8765/index.html` and open it in your browser. One UI for several EHRs: Cerner and HAPI work with no setup; Epic needs a registered app.
 
 ```bash
-pixi run smart-app
-python cli.py smart-app --no-open      # don't open a browser
-python cli.py smart-app --console      # also open code Console (signed-in launch)
+pixi run smart-app                    # EHR from EHR_TYPE (else Cerner)
+pixi run smart-app --ehr hapi         # cerner | epic | hapi
+python cli.py smart-app --no-open     # don't open a browser
+python cli.py smart-app --console     # also open the EHR's developer portal
 ```
 
-See [Demo 3](demos/smart-app.md).
+`--ehr` is only the starting point; the page has an EHR dropdown. See [Demo 3](demos/smart-app.md).
 
 ---
 
 ## smart-setup
 
-Optional. Prints the exact values to enter when registering the app in code Console, then prompts for the client ID, saves it to `smart-app/config.local.js` (gitignored) and checks the sandbox is reachable. Registration itself is manual.
+Optional for Cerner, required for Epic. Prints the exact values to enter when registering the app with the EHR, prompts for the client ID, saves it to `smart-app/config.local.js` (gitignored, one entry per EHR) and checks the sandbox is reachable. Registration itself is manual.
 
 ```bash
-pixi run smart-setup
-python cli.py smart-setup --client-id <id> --no-open
+pixi run smart-setup --ehr cerner
+pixi run smart-setup --ehr epic
+python cli.py smart-setup --ehr epic --client-id <id> --no-open
 ```
 
 ---

@@ -3,6 +3,7 @@
 //   signed - a SMART on FHIR session (launched from code Console, see launch.html)
 const $ = id => document.getElementById(id);
 const cfg = window.SMART_CONFIG;
+let profile = null, profileKey = null;   // the active EHR profile, chosen in main()
 
 function el(tag, text, cls) {
   const e = document.createElement(tag);
@@ -124,7 +125,7 @@ async function section(token, id, load, render) {
   } catch (e) {
     if (token !== current) return;
     box.replaceChildren(el("p", /40[13]|insufficient/i.test(e.message)
-      ? "Not authorized. Add this resource's scope to your app in code Console (and smart-app/config.js)."
+      ? `Not authorized. Register this resource's scope with ${profile.name} and add it to profiles.${profileKey}.resources in smart-app/config.js.`
       : `Unavailable: ${e.message}`, "muted"));
   }
 }
@@ -172,7 +173,7 @@ async function loadPatient(client, patientId) {
         [...(dated ? ["Date"] : []), "Type", "Location", "Status"], "No encounters on file.", "encounters");
     }),
     // The sandbox is slow for Condition searches on large test charts, so bound the wait.
-    section(token, "conditions", () => bundle(client, `Condition?patient=${pid}&category=problem-list-item`, { timeout: 45000 }), rs =>
+    section(token, "conditions", () => bundle(client, `Condition?patient=${pid}${profile.conditionCategory ? `&category=${profile.conditionCategory}` : ""}`, { timeout: 45000 }), rs =>
       renderList("conditions", conditions(rs).map(c => [c.name, c.date || "–", badge(c.status)]),
         ["Problem", "Onset", "Status"], "No problems on file.", "problems")),
   ]);
@@ -190,12 +191,20 @@ function fillPicker(select, options, selected) {
   if (selected) select.value = selected;
 }
 
-function setupPicker(client, launchPatient) {
+// browse=false (a patient/* scope): only the launch patient is readable, so no list or search.
+async function setupPicker(client, launchPatient, browse) {
   const select = $("patient-select");
   const base = [];
   if (launchPatient) base.push({ id: launchPatient, label: "Launch patient" });
-  for (const p of cfg.patients || []) if (!base.some(o => o.id === p.id)) base.push(p);
+  if (browse) for (const p of profile.patients || []) if (!base.some(o => o.id === p.id)) base.push(p);
+  if (browse && !base.length) {              // e.g. HAPI: no fixed test patients, list what the server has
+    try {
+      const found = await bundle(client, "Patient?_count=20");
+      for (const p of found) base.push({ id: p.id, label: `${patientName(p) || "(unnamed)"}${p.birthDate ? ", " + p.birthDate : ""}` });
+    } catch (e) { $("status").textContent = `Could not list patients: ${e.message}`; $("status").className = "error"; }
+  }
   fillPicker(select, base, base[0] && base[0].id);
+  $("search").hidden = $("search-btn").hidden = !browse;
 
   select.addEventListener("change", () => loadPatient(client, select.value));
   $("picker").addEventListener("submit", async e => {
@@ -215,41 +224,97 @@ function setupPicker(client, launchPatient) {
       $("status").className = "error";
     }
   });
-  $("picker").hidden = false;
+  $("picker").hidden = !base.length && !browse;
   return base.length ? base[0].id : null;
+}
+
+// ---- EHR bar and sign-in ----------------------------------------------------------------------
+
+const store = {
+  get(k) { try { return sessionStorage.getItem(k); } catch (e) { return null; } },
+  set(k, v) { try { sessionStorage.setItem(k, v); } catch (e) { /* storage blocked */ } },
+  del(k) { try { sessionStorage.removeItem(k); } catch (e) { /* storage blocked */ } },
+};
+
+function setupEhrBar() {
+  const select = $("ehr-select");
+  for (const [k, p] of Object.entries(cfg.profiles)) {
+    const o = el("option", p.name); o.value = k; select.append(o);
+  }
+  select.value = profileKey;
+  select.addEventListener("change", () => {
+    store.del("smart_autologin");
+    window.location.href = `index.html?ehr=${encodeURIComponent(select.value)}`;   // fresh page: drops any stale ?code=
+  });
+  $("signin").addEventListener("click", () => {
+    store.del("smart_autologin");
+    window.location.href = `launch.html?ehr=${encodeURIComponent(profileKey)}`;
+  });
+  // The app can start the login itself only where the profile has a standalone iss.
+  $("signin").hidden = !profile.standaloneIss;
 }
 
 // ---- start-up ---------------------------------------------------------------------------------
 
-function start(client, mode, note) {
+async function start(client, mode, note) {
+  const where = client.state.serverUrl;
   $("mode").textContent = mode === "signed"
-    ? `Signed in via SMART on FHIR · ${client.state.serverUrl}`
-    : `Open sandbox (read-only, no login) · ${client.state.serverUrl} · for a signed-in SMART session, launch from code Console`;
+    ? `Signed in to ${profile.name} via SMART on FHIR · ${where}`
+    : `${profile.name} · open (read-only, no login) · ${where}${profile.signedInNote ? " · " + profile.signedInNote : ""}`;
   if (note) { $("notice").textContent = note; $("notice").hidden = false; }
-  const first = setupPicker(client, mode === "signed" ? client.patient.id : null);
+  const scope = (client.state.tokenResponse || {}).scope;
+  const first = await setupPicker(client, mode === "signed" ? client.patient.id : null,
+                                  canBrowsePatients(mode === "signed", scope));
   if (first) loadPatient(client, first);
+  else if (mode === "signed") { $("status").textContent = "Signed in, but the EHR gave no patient context."; $("status").className = "error"; }
 }
 
-function openClient() {
-  return FHIR.client({ serverUrl: cfg.openBase });
+// An EHR without an open endpoint (Epic): start the login ourselves, once. A failed or cancelled
+// sign-in returns here with a notice, which stops the redirect loop.
+function requireSignIn(note) {
+  $("mode").textContent = `${profile.name} requires sign-in`;
+  const clientId = clientIdFor(profileKey, cfg, window.SMART_LOCAL);
+  if (note) { $("notice").textContent = note; $("notice").hidden = false; }
+  if (!clientId) {
+    $("status").textContent = `No ${profile.name} client id yet. Run: pixi run smart-setup --ehr ${profileKey}. ${profile.launchHint || ""}`;
+    return;
+  }
+  if (profile.standaloneIss && !note && !store.get("smart_autologin")) {
+    store.set("smart_autologin", "1");
+    $("status").textContent = `Redirecting to ${profile.name} sign-in…`;
+    window.location.replace(`launch.html?ehr=${encodeURIComponent(profileKey)}`);
+    return;
+  }
+  $("status").textContent = profile.standaloneIss
+    ? `Use Sign in to log in to ${profile.name}.`
+    : (profile.launchHint || "Launch the app from the EHR.");
 }
 
 (async function main() {
   const q = new URLSearchParams(window.location.search);
+  const returning = q.has("code") || q.has("error") || !!store.get("SMART_KEY");
+  profileKey = chooseProfile(cfg, { ehrParam: q.get("ehr"), saved: returning ? store.get("smart_ehr") : null, def: window.SMART_DEFAULT_EHR });
+  profile = cfg.profiles[profileKey];
+  const openBase = q.get("base") || profile.openBase;    // ?base= points an open profile at another server
+  setupEhrBar();
+
   let note = "";
   if (q.has("error")) {
     const uri = decodeURIComponent(q.get("error_uri") || "");
     const persona = (uri.match(/persona=([a-z]+)/) || [])[1];
     note = `Sign-in failed: ${q.get("error")} ${q.get("error_description") || ""}` +
       (persona ? ` [persona=${persona}]` : "") + (uri.includes("persona-mismatch")
-        ? " — Provider apps must be launched from code Console." : "") + " Showing the open sandbox instead.";
-  } else if (q.has("code") || sessionStorage.getItem("SMART_KEY")) {
+        ? " — the app type doesn't match this launch (Provider apps launch from the EHR; Patient apps from Sign in)." : "") +
+      (openBase ? " Showing the open sandbox instead." : "");
+  } else if (q.has("code") || store.get("SMART_KEY")) {
     try {
       const client = await FHIR.oauth2.ready();
+      store.del("smart_autologin");
       return start(client, "signed");
     } catch (e) {
-      note = `SMART session unavailable (${e.message}). Showing the open sandbox instead.`;
+      note = `SMART session unavailable (${e.message}).` + (openBase ? " Showing the open sandbox instead." : "");
     }
   }
-  start(openClient(), "open", note);
+  if (openBase) return start(FHIR.client({ serverUrl: openBase }), "open", note);
+  requireSignIn(note);
 })();

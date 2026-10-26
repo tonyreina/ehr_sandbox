@@ -14,6 +14,7 @@ nav = [
     "setup/epic-portal.md",
     "setup/cerner-sandbox.md",
     "setup/cerner-account.md",
+    "setup/epic-smart-app.md",
   ] },
   { "Authentication" = "auth.md" },
   { "EHR Clients" = "ehr-clients.md" },

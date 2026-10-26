@@ -1,34 +1,23 @@
 # Demo 3: Patient Dashboard
 
-A browser dashboard for the Oracle Health (Cerner) sandbox: patient summary, latest vitals, trend charts, lab results with sparklines, medications, allergies, encounters and problems. It runs in two modes that share all the code:
+A browser dashboard for FHIR R4 sandboxes: patient summary, latest vitals, trend charts, lab results with sparklines, medications, allergies, encounters and problems. **One UI, several EHRs**: pick the EHR from the dropdown at the top (or `--ehr` on the command line).
 
-| Mode | Login | Setup | Data |
+| EHR | No-login mode | Signed-in mode | Setup |
 |---|---|---|---|
-| **Open** (default) | none | none | the public, read-only open sandbox |
-| **Signed in** (optional) | code Console launch | register an app once | the secured sandbox via SMART on FHIR |
+| **Oracle Health (Cerner)** | yes: the open sandbox | optional (SMART, Provider app launched from code Console) | none for open mode |
+| **HAPI FHIR** | yes: public `hapi.fhir.org`, or your local server | n/a | none |
+| **Epic** | no: Epic has no open endpoint | required; the dashboard starts the login itself | register an app once |
 
 ## Quick start
 
 ```bash
 pixi install
-pixi run smart-app     # http://localhost:8765/index.html — opens in your browser
+pixi run smart-app                # http://localhost:8765/index.html (Cerner, no login)
+pixi run smart-app --ehr hapi     # HAPI public server, no login
+pixi run smart-app --ehr epic     # Epic: needs `smart-setup --ehr epic` first
 ```
 
-That's it: no account, keys or registration. Use the **Patient** dropdown, or search by name (for example `smart`), to switch patients.
-
-## How it picks a mode
-
-```mermaid
-flowchart LR
-    S[Open index.html] --> C{"Valid SMART session?"}
-    C -- "yes" --> SG["Signed-in mode: secured sandbox, Bearer token"]
-    C -- "no, or sign-in failed" --> O["Open mode: Cerner open sandbox, no login"]
-    O -. "if sign-in failed" .-> N["Notice explains why"]
-    SG --> D[Load patient and render dashboard]
-    O --> D
-```
-
-A session counts as valid when the URL carries the authorization `code` (or a SMART session is saved) and `FHIR.oauth2.ready()` succeeds. An `?error=` redirect or a failed exchange falls back to open mode with a notice.
+`--ehr` only sets the starting EHR (default: `EHR_TYPE` from `.env`, else Cerner); the page's EHR dropdown switches at any time. Use the **Patient** dropdown or the name search (for example `smart`) to switch patients.
 
 ## What it shows
 
@@ -36,59 +25,86 @@ A session counts as valid when the URL carries the authorization `code` (or a SM
 - **Laboratory:** latest value per test with a sparkline of its history.
 - **Medications, allergies, encounters, problems.** Each section loads independently, so a slow or forbidden resource never blocks the page.
 
-The sandbox is shared and its data is synthetic (for example implausible potassium values) and changes over time. Some searches are slow: labs take ~10 s and problems can take 30+ s, so those sections show *Loading…* and problems give up after 45 s.
+The sandboxes are shared and their data is synthetic (for example implausible potassium values) and changes over time. Some Cerner searches are slow: labs take ~10 s and problems can take 30+ s, so those sections show *Loading…* and problems give up after 45 s.
+
+## How it picks an EHR and a mode
+
+```mermaid
+flowchart TD
+    S[Open index.html] --> P["Choose profile: ?ehr=, saved sign-in, --ehr / EHR_TYPE, default"]
+    P --> V{"Valid SMART session?"}
+    V -- "yes" --> SG["Signed-in mode: Bearer token"]
+    V -- "no" --> O{"Profile has an open endpoint?"}
+    O -- "yes (Cerner, HAPI)" --> OM["Open mode, no login"]
+    O -- "no (Epic)" --> C{"Client id set?"}
+    C -- "no" --> H["Show: run smart-setup --ehr epic"]
+    C -- "yes" --> A{"Already tried this session, or sign-in failed?"}
+    A -- "no" --> R["Redirect to the EHR login (launch.html)"]
+    A -- "yes" --> B["Notice and a Sign in button"]
+    SG --> D[Load patient and render dashboard]
+    OM --> D
+```
+
+The automatic sign-in redirects at most once per browser session; a failed or cancelled login returns with a notice and a **Sign in** button instead of looping. A Provider app (Cerner) can't be started by the dashboard: the EHR launches it, so there is no Sign in button for it.
 
 ## Files
 
 ```
 smart-app/
 ├── index.html       the dashboard (also the SMART redirect target)
-├── app.js           mode selection, loading, rendering, patient picker/search
-├── lib.js           pure FHIR helpers (no DOM; unit-testable under node)
+├── app.js           profile/mode selection, loading, rendering, picker/search
+├── lib.js           pure helpers: FHIR transforms, profile choice, scopes (node-testable)
 ├── charts.js        dependency-free SVG line charts and sparklines
 ├── style.css        light/dark theme tokens
-├── config.js        shared settings and the test-patient list
-├── config.local.js  your client id (generated by smart-setup, gitignored)
-└── launch.html      starts the SMART authorization (signed-in mode only)
+├── config.js        EHR profiles (servers, scopes, test patients)
+├── config.local.js  your per-EHR client ids (generated by smart-setup, gitignored)
+├── launch.html      starts the SMART authorization (any profile)
+└── __ehr.js         served by `pixi run smart-app` only: the starting EHR
 ```
 
-`fhirclient` 2.5.2 (jsDelivr) is used for requests in both modes and for the OAuth flow in signed-in mode.
+`fhirclient` 2.5.2 (jsDelivr) is used for requests in every mode and for the OAuth flow when signing in (PKCE is used when the server supports it).
 
-## Signed-in mode (optional)
+## Profiles
 
-Open mode never needs this. To exercise a real SMART launch:
+Each EHR is a profile in `smart-app/config.js`:
+
+| Field | Meaning |
+|---|---|
+| `openBase` | no-login FHIR base URL, or `null` if sign-in is required |
+| `standaloneIss` | where the app can start the login itself; `null` if the EHR must launch it |
+| `issMatch` | host fragment that identifies the EHR when it launches the app |
+| `resources` | resources requested at sign-in (each needs a registered scope) |
+| `patients` | test patients for the picker (empty: list the server's first patients) |
+| `conditionCategory` | category used for the Problems search |
+
+Add an EHR by adding a profile; the rendering code is plain FHIR R4 and shared. A different server for an open profile can be tried with `?base=`, for example `index.html?ehr=hapi&base=http://localhost:8080/fhir` for a local [HAPI](https://hapifhir.io) Docker container.
+
+## Signing in
+
+Cerner needs this only for a signed-in session; Epic always needs it.
 
 ```bash
-pixi run smart-setup   # prints the exact values to enter in code Console, saves your client ID
-pixi run smart-app
+pixi run smart-setup --ehr cerner   # or --ehr epic
 ```
 
-The launch sequence is diagrammed in [Authentication](../auth.md#cerner-smart-on-fhir-dashboard).
+prints the exact values to enter, saves the client ID you get back in `smart-app/config.local.js` (one entry per EHR) and checks the sandbox is reachable. Registering is manual because neither EHR provides an API for it and both need your login.
 
-Registering the app is the one manual step: Oracle provides no API for it and it needs your CernerCare login. Then in [code Console](https://code-console.cerner.com/): your app → **Test Sandbox** → pick a patient → **Launch**. Cerner opens `launch.html?iss=…&launch=…`, you log in, and the dashboard header changes to *Signed in via SMART on FHIR*.
+- **Cerner:** [Cerner Account & Registration](../setup/cerner-account.md). Launch from code Console: your app → **Test Sandbox** → pick a patient → **Launch**.
+- **Epic:** [Epic SMART App Registration](../setup/epic-smart-app.md). Open the dashboard with `--ehr epic`; it redirects to Epic's login by itself.
 
-### Registration values
+The login sequences are diagrammed in [Authentication](../auth.md#browser-sign-in-smart-on-fhir).
 
-| Field | Value |
-|---|---|
-| Application Type | **Provider** |
-| Type of Access | Online |
-| Application Privacy | Public |
-| SMART Version | SMART v1 |
-| Default FHIR Version | **R4** |
-| Redirect URI | `http://localhost:8765/index.html` |
-| SMART Launch URI | `http://localhost:8765/launch.html` |
-| Scopes | `launch`, `online_access`, `openid`, `fhirUser`, `user/Patient.read`, `user/Observation.read`, plus any of `user/MedicationRequest.read`, `user/AllergyIntolerance.read`, `user/Encounter.read`, `user/Condition.read` |
+### Scopes
 
-Wildcard scopes are not supported and new registrations take a few minutes to propagate.
+The app requests `Patient` and `Observation` by default (`resources` in the profile). To also load the other sections when signed in, register their scopes with the EHR **and** add the resource names to the profile; sections without a scope show *Not authorized*. Requesting a scope you didn't register can make the EHR reject the whole sign-in.
 
-The app requests `Patient` and `Observation` by default (`smartResources` in `config.js`). To also load the other sections when signed in, add their scopes in code Console **and** add the resource names to `smartResources`; sections without a scope show *Not authorized*. Requesting a scope you didn't register makes Cerner reject the whole sign-in.
+- Provider/clinician launches use `user/…` scopes, which let the signed-in user read any patient they can access, so the picker and search work.
+- Patient (standalone) logins use `patient/…` scopes, which only cover the patient who logged in, so the picker shows that one patient and search is hidden.
 
-### Notes on signing in
+### Notes
 
-- Provider apps use `user/…` scopes; Patient apps use `patient/…` (override with `?scope_prefix=`). `user/…` scopes let the signed-in user read any patient they can access, so the picker works beyond the launch patient.
-- A client is only accepted by the persona matching its App type. Opening `launch.html` directly with a Provider app fails with `client-persona-mismatch`; launch from code Console. For standalone launch, register a *Patient* app and set `appType: "patient"` in `config.js`.
-- `index.html` must be reached through the redirect. If you reload it or open it directly after a failed or expired sign-in, the dashboard falls back to open mode and says why.
-- Access tokens last about 10 minutes.
-- The client id is an identifier, not a secret; this is a public client and no secret or private key is used.
-- Not verified in automated testing: the login step needs your own code Console registration.
+- A client is only accepted by the persona matching its app type. Opening `launch.html` directly with a Cerner **Provider** app fails with `client-persona-mismatch`; launch from code Console. For a standalone Cerner login register a *Patient* app and set the profile's `standaloneIss` to the `fhir-myrecord` URL.
+- `index.html` must be reached through the redirect. If you reload it after an expired or failed sign-in, an open profile falls back to open mode and says why.
+- Access tokens last about an hour (Epic) or 10 minutes (Cerner); sign in again when they expire.
+- Client ids are identifiers, not secrets; these are public clients and no secret or private key is used. The Epic backend key from the Python demos can't be used in a browser.
+- The Cerner and HAPI paths were verified against the live sandboxes. The Epic path was verified against a mocked Epic (discovery, authorize redirect with PKCE and scopes, token exchange, FHIR calls), not the live sandbox.

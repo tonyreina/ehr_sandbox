@@ -41,7 +41,7 @@ classDiagram
     ClientFactory o-- BaseEHRClient : registry
 ```
 
-Test patients per EHR and their defaults live in `ehr/patients.py`.
+Test patients per EHR and their defaults live in `ehr/patients.py`. The browser dashboard (`smart-app/`) does not use these Python clients; it has its own EHR profiles in `smart-app/config.js`, see [Demo 3](demos/smart-app.md).
 
 ### BaseEHRClient
 

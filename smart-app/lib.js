@@ -141,6 +141,41 @@ function conditions(resources) {
   return [...seen.values()];
 }
 
+// ---- EHR profiles (see config.js) -------------------------------------------------------------
+
+// Which profile applies: the iss host of a launch wins, then ?ehr=, the profile saved when the
+// sign-in started, the CLI's default, and finally config.ehr.
+function chooseProfile(cfg, { iss, ehrParam, saved, def } = {}) {
+  const keys = Object.keys(cfg.profiles);
+  if (iss) {
+    try {
+      const host = new URL(iss).hostname;
+      const hit = keys.find(k => cfg.profiles[k].issMatch && host.includes(cfg.profiles[k].issMatch));
+      if (hit) return hit;
+    } catch (e) { /* not a URL: fall through */ }
+  }
+  for (const k of [ehrParam, saved, def, cfg.ehr]) if (k && cfg.profiles[k]) return k;
+  return keys[0];
+}
+
+// Client ids live in config.local.js ({clientIds: {cerner: "...", epic: "..."}}); the older
+// single `clientId` setting still maps to Cerner.
+function clientIdFor(key, cfg, local) {
+  return ((local || {}).clientIds || {})[key] || (key === "cerner" ? cfg.clientId : "") || "";
+}
+
+// EHR launch (the EHR opens the app, `launch` scope) vs standalone (the app starts the login).
+function scopesFor(profile, { ehrLaunch, prefixOverride } = {}) {
+  const prefix = prefixOverride || (ehrLaunch ? profile.ehrScopePrefix : profile.standaloneScopePrefix);
+  return [ehrLaunch ? "launch" : "launch/patient", ...profile.extraScopes,
+          ...profile.resources.map(r => `${prefix}/${r}.read`)].join(" ");
+}
+
+// user/* scopes can read any patient the user may see; patient/* scopes only the launch patient.
+function canBrowsePatients(signedIn, scopeString) {
+  return !signedIn || /(^|\s)user\//.test(scopeString || "");
+}
+
 if (typeof module !== "undefined") {
-  module.exports = { patientName, ageFromBirthDate, VITALS, buildVitalChart, groupLabs, medications, allergies, encounters, conditions };
+  module.exports = { chooseProfile, clientIdFor, scopesFor, canBrowsePatients, patientName, ageFromBirthDate, VITALS, buildVitalChart, groupLabs, medications, allergies, encounters, conditions };
 }

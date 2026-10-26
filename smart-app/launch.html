@@ -3,49 +3,39 @@
 <head>
   <meta charset="utf-8">
   <title>SMART Launch</title>
+  <link rel="icon" href="data:,">
   <script src="https://cdn.jsdelivr.net/npm/fhirclient@2.5.2/build/fhir-client.js"></script>
   <script src="config.js"></script>
   <script src="config.local.js" onerror="void 0"></script>
+  <script src="__ehr.js" onerror="void 0"></script>
+  <script src="lib.js"></script>
 </head>
-<body>
-  <p id="msg">Redirecting to the authorization server…</p>
+<body style="font: 15px/1.5 system-ui, sans-serif; max-width: 40rem; margin: 2rem auto; padding: 0 1rem">
+  <p id="msg">Redirecting to the sign-in page…</p>
   <script>
-    // Handles both flows:
-    //   EHR launch   : the EHR opens  launch.html?iss=<fhir base>&launch=<token>
-    //   Standalone   : open           launch.html?iss=<fhir base>   (user picks the patient at login)
+    // Handles both flows for every EHR profile:
+    //   EHR launch  : the EHR opens  launch.html?iss=<fhir base>&launch=<token>
+    //   Standalone  : the dashboard opens  launch.html?ehr=<profile>  and the app starts the login
     const params = new URLSearchParams(window.location.search);
-    const cfg = window.SMART_CONFIG;
-    const clientId = params.get("client_id") || cfg.clientId;
+    const cfg = window.SMART_CONFIG, msg = document.getElementById("msg");
+    const key = chooseProfile(cfg, { iss: params.get("iss"), ehrParam: params.get("ehr"), def: window.SMART_DEFAULT_EHR });
+    const profile = cfg.profiles[key];
     const ehrLaunch = params.has("launch");
-
-    const iss = params.get("iss") || (cfg.appType === "patient" ? cfg.patientIss : null);
+    const iss = params.get("iss") || profile.standaloneIss;
+    const clientId = params.get("client_id") || clientIdFor(key, cfg, window.SMART_LOCAL);
 
     if (!clientId) {
-      document.getElementById("msg").textContent =
-        "No client id. Run `pixi run smart-setup` (or pass ?client_id=...).";
+      msg.textContent = `No ${profile.name} client id. Run: pixi run smart-setup --ehr ${key}  (or pass ?client_id=...)`;
     } else if (!iss) {
-      document.getElementById("msg").textContent =
-        "This is a Provider app, which can't be launched by opening this page directly. " +
-        "In code Console choose Begin Testing, pick a patient and click Launch " +
-        "(or set appType to \"patient\" in config.js for a Patient app).";
+      msg.textContent = `${profile.name} can't start the login itself. ${profile.launchHint || ""}`;
     } else {
-      // Oracle Health requires every scope to be listed explicitly (no wildcards), and they must
-      // match what the app registered in code Console. Provider apps (EHR launch) are registered
-      // with user/* scopes; Patient apps (standalone) with patient/* scopes.
-      // Override with ?scope_prefix=patient or ?scope_prefix=user.
-      const prefix = params.get("scope_prefix") || (ehrLaunch ? "user" : "patient");
-      const scope = [
-        ehrLaunch ? "launch" : "launch/patient",
-        "openid", "fhirUser", "online_access",
-        ...cfg.smartResources.map(r => `${prefix}/${r}.read`),
-      ].join(" ");
-
-      FHIR.oauth2.authorize({
-        clientId,
-        scope,
-        redirectUri: cfg.redirectUri,
-        iss,   // fhirclient discovers endpoints via .well-known/smart-configuration
-      }).catch(e => { document.getElementById("msg").textContent = "Launch failed: " + e.message; });
+      // Remember which EHR this sign-in is for: the redirect back to index.html carries no ehr param.
+      try { sessionStorage.setItem("smart_ehr", key); } catch (e) { /* storage blocked: default profile is used */ }
+      // Scopes must match what the app registered with the EHR (no wildcards).
+      // Override the prefix with ?scope_prefix=patient or ?scope_prefix=user.
+      const scope = scopesFor(profile, { ehrLaunch, prefixOverride: params.get("scope_prefix") });
+      FHIR.oauth2.authorize({ clientId, scope, redirectUri: cfg.redirectUri, iss })
+        .catch(e => { msg.textContent = "Launch failed: " + e.message; });
     }
   </script>
 </body>
