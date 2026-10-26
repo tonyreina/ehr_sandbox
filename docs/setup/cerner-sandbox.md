@@ -37,6 +37,8 @@ pixi run smart-app
 
 opens a browser dashboard on the same open sandbox with no login. See [Demo 3](../demos/smart-app.md). For a signed-in SMART session see [Cerner Account & Registration](cerner-account.md).
 
+![Dashboard on the Oracle Health (Cerner) open sandbox](../demos/oracle_ehr_app.png)
+
 ## Run the demos
 
 ```bash

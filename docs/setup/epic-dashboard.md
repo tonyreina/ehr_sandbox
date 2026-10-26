@@ -2,6 +2,8 @@
 
 The dashboard reaches Epic with the **Backend Systems app you already use for the Python demos**. There is nothing extra to register and no login: `pixi run smart-app` signs in server-side with your private key and passes the dashboard's read requests through to Epic.
 
+![Dashboard on the Epic sandbox via the local proxy](../demos/epic_ehr_app.png)
+
 ```mermaid
 sequenceDiagram
     autonumber
