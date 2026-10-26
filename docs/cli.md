@@ -71,6 +71,7 @@ camila       Camila Lopez         1987-09-12   F    erXuFYUfucBZaryVksYEcMg3
 derrick      Derrick Lin          1973-06-03   M    eq081-VQEgP8drUUqCWzHfw3
 theodore     Theodore Mychart     1948-07-07   M    e63wRTbPfr1p8UW81d8Seiw3
 linda        Linda Ross           1969-04-27   F    eIXesllypH3M9tAA5WdJftQ3
+warren       Warren McGinnis      1952-05-24   M    e0w0LEDCYtfckT6N.CkJKCw3
 ```
 
 ---
