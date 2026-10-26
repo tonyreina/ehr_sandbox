@@ -25,12 +25,23 @@ This writes four files to `keys/`:
 
 The command also prints the `kid` (key ID) and next steps.
 
+```mermaid
+flowchart LR
+    G["pixi run generate-keys"] --> P["private_key.pem (local, gitignored)"]
+    G --> J["public_jwks.json"]
+    J -->|"git push"| R["raw.githubusercontent.com URL"]
+    R -->|"paste as JWK Set URL"| E["Epic app registration"]
+    P -->|"signs JWTs"| T["EpicClient"]
+    E -->|"verifies signature using"| R
+    T -->|"JWT"| E
+```
+
 ## Host the public key
 
 `keys/public_jwks.json` is committed to the repo and served automatically via GitHub's CDN:
 
 ```
-https://raw.githubusercontent.com/tonyreina/epic-fhir-sandbox/main/keys/public_jwks.json
+https://raw.githubusercontent.com/tonyreina/ehr_sandbox/main/keys/public_jwks.json
 ```
 
 Use this URL when registering the app in Epic. It updates automatically whenever you push new keys — no Gist to maintain.

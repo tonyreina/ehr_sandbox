@@ -1,9 +1,11 @@
 """Epic (backend system / client credentials) FHIR client."""
 import json
 import os
+import threading
 import time
 import uuid
 from pathlib import Path
+from urllib.parse import unquote
 
 import jwt
 import requests
@@ -34,6 +36,7 @@ class EpicClient(BaseEHRClient):
         self._jwks_file   = jwks_file
         self._session:    requests.Session | None = None
         self._token_exp:  float = 0.0
+        self._lock        = threading.Lock()   # the dashboard proxy calls this from several threads
 
     # ------------------------------------------------------------------ props
 
@@ -78,14 +81,15 @@ class EpicClient(BaseEHRClient):
         return data["access_token"], time.time() + expires_in
 
     def _session_(self) -> requests.Session:
-        if self._session is None or time.time() >= self._token_exp - _TOKEN_BUFFER:
-            token, self._token_exp = self._fetch_token()
-            self._session = requests.Session()
-            self._session.headers.update({
-                "Authorization": f"Bearer {token}",
-                "Accept":        "application/fhir+json",
-            })
-        return self._session
+        with self._lock:
+            if self._session is None or time.time() >= self._token_exp - _TOKEN_BUFFER:
+                token, self._token_exp = self._fetch_token()
+                self._session = requests.Session()
+                self._session.headers.update({
+                    "Authorization": f"Bearer {token}",
+                    "Accept":        "application/fhir+json",
+                })
+            return self._session
 
     # ------------------------------------------------------------------ FHIR
 
@@ -108,6 +112,17 @@ class EpicClient(BaseEHRClient):
         })
         r.raise_for_status()
         return [e["resource"] for e in r.json().get("entry", [])]
+
+    def get_raw(self, path_and_query: str) -> requests.Response:
+        """GET a path relative to the FHIR base (e.g. "Patient?name=lin"); status is not raised.
+
+        Used by the dashboard's local proxy, so only plain relative paths are accepted.
+        """
+        path = unquote(path_and_query.split("?", 1)[0])     # check what the server will see (%2F, %2E)
+        if path.startswith(("/", "\\")) or "://" in path or "\\" in path or ".." in path.split("/"):
+            raise ValueError(f"not a relative FHIR path: {path_and_query!r}")
+        session = self._session_()
+        return requests.get(f"{self._fhir_base}/{path_and_query}", headers=dict(session.headers), timeout=60)
 
     # ------------------------------------------------------------------ factory
 

@@ -3,6 +3,7 @@
 //   signed - a SMART on FHIR session (launched from code Console, see launch.html)
 const $ = id => document.getElementById(id);
 const cfg = window.SMART_CONFIG;
+let profile = null, profileKey = null;   // the active EHR profile, chosen in main()
 
 function el(tag, text, cls) {
   const e = document.createElement(tag);
@@ -87,12 +88,30 @@ function renderLabs(observations) {
   const groups = groupLabs(observations);
   const box = $("labs"); box.replaceChildren();
   if (!groups.length) return box.append(el("p", "No numeric lab results.", "muted"));
+  const flagged = groups.filter(g => g.latest.flag);
   box.append(simpleTable(
-    ["Test", "Latest", "Date", "Trend", "Results"],
-    groups.slice(0, 12).map(g => [g.name, `${g.latest.v} ${g.unit}`, g.latest.date, sparkline(g.points), String(g.points.length)]),
-    [1, 4]));
-  if (groups.length > 12) box.append(el("p", `…and ${groups.length - 12} more tests.`, "muted"));
+    ["Test", "Result", "Flag", "Ref range", "Date", "Trend", "#"],
+    groups.slice(0, 15).map(g => {
+      const f = g.latest.flag;
+      const value = el("span", `${g.latest.v} ${g.unit}`, f ? (/^L/.test(f) ? "abnormal-low" : "abnormal") : undefined);
+      return [g.name, value, f ? el("span", f, `flag flag-${f}`) : "", g.latest.range || "", g.latest.date,
+              sparkline(g.points), String(g.points.length)];
+    }),
+    [1, 6]));
+  if (flagged.length) box.prepend(el("p", `${flagged.length} abnormal latest result${flagged.length > 1 ? "s" : ""} (flagged H/L/A).`, "muted"));
+  if (groups.length > 15) box.append(el("p", `…and ${groups.length - 15} more tests.`, "muted"));
 }
+
+function renderFlowsheet(charts) {
+  const { days, rows } = buildFlowsheet(charts);
+  const box = $("flowsheet"); box.replaceChildren();
+  if (!rows.length) return box.append(el("p", "No vital-sign readings.", "muted"));
+  const wrap = simpleTable(["Vital", ...days], rows.map(r => [`${r.label} (${r.unit})`, ...r.cells]));
+  wrap.querySelector("table").classList.add("flowsheet");
+  box.append(wrap);
+}
+
+function setChip(id, text) { $(id).textContent = text; }
 
 const MAX_ROWS = 10;
 function renderList(id, rows, headers, empty, noun) {
@@ -111,11 +130,12 @@ async function bundle(client, query, { timeout = 0 } = {}) {
   const b = timeout
     ? await Promise.race([req, new Promise((_, rej) => setTimeout(() => rej(new Error(`timed out after ${timeout / 1000}s`)), timeout))])
     : await req;
-  return (b.entry || []).map(e => e.resource);
+  // Epic also returns OperationOutcome entries (search warnings) inside result bundles.
+  return (b.entry || []).map(e => e.resource).filter(r => r && r.resourceType !== "OperationOutcome");
 }
 
 // Fills a section independently so one slow or forbidden resource never blocks the page.
-async function section(token, id, load, render) {
+async function section(token, id, load, render, onFail) {
   const box = $(id);
   box.replaceChildren(el("p", "Loading… (the sandbox can take 10+ seconds)", "muted loading"));
   try {
@@ -123,8 +143,11 @@ async function section(token, id, load, render) {
     if (token === current) render(data);
   } catch (e) {
     if (token !== current) return;
+    if (onFail) onFail(e);
     box.replaceChildren(el("p", /40[13]|insufficient/i.test(e.message)
-      ? "Not authorized. Add this resource's scope to your app in code Console (and smart-app/config.js)."
+      ? (profile.proxy
+        ? `Not authorized. Add this resource's read/search API to your ${profile.name} backend app.`
+        : `Not authorized. Register this resource's scope with ${profile.name} and add it to profiles.${profileKey}.resources in smart-app/config.js.`)
       : `Unavailable: ${e.message}`, "muted"));
   }
 }
@@ -145,24 +168,33 @@ async function loadPatient(client, patientId) {
   if (token !== current) return;
   $("status").textContent = "";
   const age = ageFromBirthDate(p.birthDate);
-  $("name").textContent = patientName(p);
-  $("demographics").textContent = [p.gender, age !== null ? `${age} years` : null,
-    p.birthDate ? `born ${p.birthDate}` : null, `ID ${p.id}`].filter(Boolean).join(" · ");
+  const name = patientName(p);
+  $("name").textContent = name;
+  $("avatar").textContent = initials(name);
+  $("demographics").textContent = [p.gender ? p.gender[0].toUpperCase() + p.gender.slice(1) : null,
+    age !== null ? `${age} y` : null, p.birthDate ? `DOB ${p.birthDate}` : null, `ID ${p.id}`].filter(Boolean).join(" · ");
+  setChip("chip-allergies", "Allergies: loading…");
+  setChip("chip-problems", "Problems: loading…");
+  setChip("chip-source", profile.name);
+  $("flowsheet").replaceChildren(el("p", "Loading…", "muted loading"));
   $("dash").hidden = false;
 
   const obs = category => () => bundle(client, `Observation?patient=${pid}&category=${category}&_sort=-date&_count=100`);
   await Promise.all([
     section(token, "charts", obs("vital-signs"), data => {
       const charts = VITALS.map(spec => buildVitalChart(spec, data));
-      renderTiles(charts); renderCharts(charts);
-    }),
+      renderTiles(charts); renderCharts(charts); renderFlowsheet(charts);
+    }, () => $("flowsheet").replaceChildren(el("p", "Unavailable.", "muted"))),
     section(token, "labs", obs("laboratory"), renderLabs),
     section(token, "meds", () => bundle(client, `MedicationRequest?patient=${pid}&_count=50`), rs =>
       renderList("meds", medications(rs).map(m => [m.name, m.dose, badge(m.status)]),
         ["Medication", "Dose", "Status"], "No medications on file.", "medications")),
-    section(token, "allergies", () => bundle(client, `AllergyIntolerance?patient=${pid}&_count=50`), rs =>
-      renderList("allergies", allergies(rs).map(a => [a.name, a.reactions, badge(a.criticality)]),
-        ["Allergen", "Reactions", "Criticality"], "No known allergies on file.", "allergies")),
+    section(token, "allergies", () => bundle(client, `AllergyIntolerance?patient=${pid}&_count=50`), rs => {
+      const as = allergies(rs);
+      setChip("chip-allergies", as.length ? `Allergies (${as.length})` : "No known allergies");
+      renderList("allergies", as.map(a => [a.name, a.reactions, badge(a.criticality)]),
+        ["Allergen", "Reactions", "Criticality"], "No known allergies on file.", "allergies");
+    }, () => setChip("chip-allergies", "Allergies: unavailable")),
     section(token, "encounters", () => bundle(client, `Encounter?patient=${pid}&_count=20`), rs => {
       const es = encounters(rs);
       // The sandbox often has no encounter dates; show where instead of a column of dashes.
@@ -172,9 +204,12 @@ async function loadPatient(client, patientId) {
         [...(dated ? ["Date"] : []), "Type", "Location", "Status"], "No encounters on file.", "encounters");
     }),
     // The sandbox is slow for Condition searches on large test charts, so bound the wait.
-    section(token, "conditions", () => bundle(client, `Condition?patient=${pid}&category=problem-list-item`, { timeout: 45000 }), rs =>
-      renderList("conditions", conditions(rs).map(c => [c.name, c.date || "–", badge(c.status)]),
-        ["Problem", "Onset", "Status"], "No problems on file.", "problems")),
+    section(token, "conditions", () => bundle(client, `Condition?patient=${pid}${profile.conditionCategory ? `&category=${profile.conditionCategory}` : ""}`, { timeout: 45000 }), rs => {
+      const cs = conditions(rs), active = cs.filter(c => c.status === "active").length;
+      setChip("chip-problems", cs.length ? `Problems (${active} active of ${cs.length})` : "No problems on file");
+      renderList("conditions", cs.map(c => [c.name, c.date || "–", badge(c.status)]),
+        ["Problem", "Onset", "Status"], "No problems on file.", "problems");
+    }, () => setChip("chip-problems", "Problems: unavailable")),
   ]);
 }
 
@@ -183,29 +218,44 @@ async function loadPatient(client, patientId) {
 function fillPicker(select, options, selected) {
   select.replaceChildren();
   for (const o of options) {
-    const opt = el("option", `${o.label} (${o.id})`);
+    const opt = el("option", o.label);         // the banner shows the id
     opt.value = o.id;
+    opt.title = o.id;
     select.append(opt);
   }
   if (selected) select.value = selected;
 }
 
-function setupPicker(client, launchPatient) {
+// browse=false (a patient/* scope): only the launch patient is readable, so no list or search.
+async function setupPicker(client, launchPatient, browse) {
   const select = $("patient-select");
   const base = [];
   if (launchPatient) base.push({ id: launchPatient, label: "Launch patient" });
-  for (const p of cfg.patients || []) if (!base.some(o => o.id === p.id)) base.push(p);
+  if (browse) for (const p of profile.patients || []) if (!base.some(o => o.id === p.id)) base.push(p);
+  if (browse && !base.length) {              // e.g. HAPI: no fixed test patients, list what the server has
+    try {
+      const found = await bundle(client, "Patient?_count=20");
+      for (const p of found) base.push({ id: p.id, label: `${patientName(p) || "(unnamed)"}${p.birthDate ? ", " + p.birthDate : ""}` });
+    } catch (e) { $("status").textContent = `Could not list patients: ${e.message}`; $("status").className = "error"; }
+  }
   fillPicker(select, base, base[0] && base[0].id);
+  $("search").hidden = $("search-btn").hidden = !browse;
+  $("search-dob").hidden = !browse || !profile.searchNeedsBirthDate;
 
   select.addEventListener("change", () => loadPatient(client, select.value));
   $("picker").addEventListener("submit", async e => {
     e.preventDefault();
-    const text = $("search").value.trim();
+    const text = $("search").value.trim(), dob = $("search-dob").value;
     if (!text) return;
+    if (profile.searchNeedsBirthDate && !dob) {
+      $("status").className = "error";
+      $("status").textContent = `${profile.name} only finds patients by name together with a birth date.`;
+      return;
+    }
     $("status").className = "muted";
     $("status").textContent = `Searching for “${text}”…`;
     try {
-      const found = await bundle(client, `Patient?name=${encodeURIComponent(text)}&_count=20`);
+      const found = await bundle(client, `Patient?name=${encodeURIComponent(text)}${dob ? `&birthdate=${dob}` : ""}&_count=20`);
       if (!found.length) { $("status").textContent = `No patients match “${text}”.`; return; }
       fillPicker(select, found.map(p => ({ id: p.id, label: `${patientName(p)}${p.birthDate ? ", " + p.birthDate : ""}` })));
       $("status").textContent = `${found.length} match${found.length > 1 ? "es" : ""}.`;
@@ -215,41 +265,121 @@ function setupPicker(client, launchPatient) {
       $("status").className = "error";
     }
   });
-  $("picker").hidden = false;
+  $("picker").hidden = !base.length && !browse;
   return base.length ? base[0].id : null;
+}
+
+// ---- EHR bar and sign-in ----------------------------------------------------------------------
+
+const store = {
+  get(k) { try { return sessionStorage.getItem(k); } catch (e) { return null; } },
+  set(k, v) { try { sessionStorage.setItem(k, v); } catch (e) { /* storage blocked */ } },
+  del(k) { try { sessionStorage.removeItem(k); } catch (e) { /* storage blocked */ } },
+};
+
+function setupEhrBar() {
+  const select = $("ehr-select");
+  for (const [k, p] of Object.entries(cfg.profiles)) {
+    const o = el("option", p.name); o.value = k; select.append(o);
+  }
+  select.value = profileKey;
+  select.addEventListener("change", () => {
+    store.del("smart_autologin");
+    window.location.href = `index.html?ehr=${encodeURIComponent(select.value)}`;   // fresh page: drops any stale ?code=
+  });
+  $("signin").addEventListener("click", () => {
+    store.del("smart_autologin");
+    window.location.href = `launch.html?ehr=${encodeURIComponent(profileKey)}`;
+  });
+  // The app can start the login itself only where the profile has a standalone iss.
+  $("signin").hidden = !profile.standaloneIss;
+}
+
+// Highlight the sidebar link of the section in view.
+function setupSidebar() {
+  const links = [...document.querySelectorAll(".sidebar a")];
+  if (!("IntersectionObserver" in window)) return;
+  const io = new IntersectionObserver(entries => {
+    const seen = entries.filter(e => e.isIntersecting).sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0];
+    if (!seen) return;
+    for (const a of links) a.classList.toggle("active", a.getAttribute("href") === `#${seen.target.id}`);
+  }, { rootMargin: "-130px 0px -55% 0px" });
+  for (const a of links) { const s = document.querySelector(a.getAttribute("href")); if (s) io.observe(s); }
 }
 
 // ---- start-up ---------------------------------------------------------------------------------
 
-function start(client, mode, note) {
+async function start(client, mode, note) {
+  const where = client.state.serverUrl;
   $("mode").textContent = mode === "signed"
-    ? `Signed in via SMART on FHIR · ${client.state.serverUrl}`
-    : `Open sandbox (read-only, no login) · ${client.state.serverUrl} · for a signed-in SMART session, launch from code Console`;
+    ? `Signed in to ${profile.name} via SMART on FHIR · ${where}`
+    : mode === "proxy"
+    ? `${profile.name} · via local proxy using your backend app (read-only, no login) · ${where}`
+    : `${profile.name} · open (read-only, no login) · ${where}${profile.signedInNote ? " · " + profile.signedInNote : ""}`;
   if (note) { $("notice").textContent = note; $("notice").hidden = false; }
-  const first = setupPicker(client, mode === "signed" ? client.patient.id : null);
+  const scope = (client.state.tokenResponse || {}).scope;
+  const first = await setupPicker(client, mode === "signed" ? client.patient.id : null,
+                                  canBrowsePatients(mode === "signed", scope));
   if (first) loadPatient(client, first);
+  else if (mode === "signed") { $("status").textContent = "Signed in, but the EHR gave no patient context."; $("status").className = "error"; }
 }
 
-function openClient() {
-  return FHIR.client({ serverUrl: cfg.openBase });
+// An EHR without an open endpoint (Epic): start the login ourselves, once. A failed or cancelled
+// sign-in returns here with a notice, which stops the redirect loop.
+function requireSignIn(note) {
+  if (note) { $("notice").textContent = note; $("notice").hidden = false; }
+  if (profile.proxy) {                       // e.g. Epic: only reachable through the CLI's proxy
+    $("mode").textContent = `${profile.name} is not available here`;
+    $("status").textContent = window.SMART_PROXY
+      ? `pixi run smart-app is running, but ${profile.name} isn't configured. ${profile.launchHint || ""}`
+      : `Open this page through pixi run smart-app. ${profile.launchHint || ""}`;
+    return;
+  }
+  $("mode").textContent = `${profile.name} requires sign-in`;
+  const clientId = clientIdFor(profileKey, cfg, window.SMART_LOCAL);
+  if (!clientId) {
+    $("status").textContent = `No ${profile.name} client id yet. Run: pixi run smart-setup --ehr ${profileKey}. ${profile.launchHint || ""}`;
+    return;
+  }
+  if (profile.standaloneIss && !note && !store.get("smart_autologin")) {
+    store.set("smart_autologin", "1");
+    $("status").textContent = `Redirecting to ${profile.name} sign-in…`;
+    window.location.replace(`launch.html?ehr=${encodeURIComponent(profileKey)}`);
+    return;
+  }
+  $("status").textContent = profile.standaloneIss
+    ? `Use Sign in to log in to ${profile.name}.`
+    : (profile.launchHint || "Launch the app from the EHR.");
 }
 
 (async function main() {
   const q = new URLSearchParams(window.location.search);
+  const returning = q.has("code") || q.has("error") || !!store.get("SMART_KEY");
+  profileKey = chooseProfile(cfg, { ehrParam: q.get("ehr"), saved: returning ? store.get("smart_ehr") : null, def: window.SMART_DEFAULT_EHR });
+  profile = cfg.profiles[profileKey];
+  // ?base= points an open profile at another server; a proxied profile (Epic) needs the CLI's proxy.
+  const proxied = !!(profile.proxy && (window.SMART_PROXY || {})[profileKey]);
+  const openBase = q.get("base") || profile.openBase || (proxied ? new URL(profile.proxy, window.location.href).href : null);
+  setupEhrBar();
+  setupSidebar();
+
   let note = "";
   if (q.has("error")) {
     const uri = decodeURIComponent(q.get("error_uri") || "");
     const persona = (uri.match(/persona=([a-z]+)/) || [])[1];
     note = `Sign-in failed: ${q.get("error")} ${q.get("error_description") || ""}` +
       (persona ? ` [persona=${persona}]` : "") + (uri.includes("persona-mismatch")
-        ? " — Provider apps must be launched from code Console." : "") + " Showing the open sandbox instead.";
-  } else if (q.has("code") || sessionStorage.getItem("SMART_KEY")) {
+        ? " — the app type doesn't match this launch (Provider apps launch from the EHR; Patient apps from Sign in)." : "") +
+      (openBase ? " Showing the open sandbox instead." : "");
+  } else if (q.has("code") || store.get("SMART_KEY")) {
     try {
       const client = await FHIR.oauth2.ready();
+      store.del("smart_autologin");
       return start(client, "signed");
     } catch (e) {
-      note = `SMART session unavailable (${e.message}). Showing the open sandbox instead.`;
+      note = `SMART session unavailable (${e.message}).` + (openBase ? " Showing the open sandbox instead." : "");
     }
   }
-  start(openClient(), "open", note);
+  if (openBase) return start(FHIR.client({ serverUrl: openBase }), proxied ? "proxy" : "open", note);
+  requireSignIn(note);
 })();

@@ -16,7 +16,7 @@ Requires [pixi](https://pixi.sh).
 
 ```bash
 pixi install
-pixi run smart-app        # patient dashboard: http://localhost:8765/index.html
+pixi run smart-app        # patient dashboard (Cerner, no login): http://localhost:8765/index.html
 ```
 
 The dashboard shows vitals trend charts, labs, medications, allergies, encounters and problems for sandbox patients, with a patient picker and name search. See [docs/demos/smart-app.md](docs/demos/smart-app.md).
@@ -30,16 +30,17 @@ pixi run observations joe
 pixi run observations nancy --category vital-signs --count 5
 ```
 
-## Signed-in SMART on FHIR (optional, Cerner)
+## Patient dashboard: one UI, several EHRs
 
-The dashboard can also run as a real SMART app with a login. This needs a free CernerCare account and a one-time app registration in [code Console](https://code-console.cerner.com/):
+`smart-app/` is a browser dashboard (vitals charts, labs, medications, allergies, encounters, problems) with an EHR dropdown. None of them needs a login: Cerner and HAPI are open, and Epic goes through a local proxy that uses your existing Backend Systems app (`.env`, `keys/`). See [docs/demos/smart-app.md](docs/demos/smart-app.md).
 
 ```bash
-pixi run smart-setup      # prints the values to enter in code Console, saves your client ID
-pixi run smart-app        # then: code Console -> your app -> Test Sandbox -> Launch
+pixi run smart-app                 # Cerner open sandbox, no login (default)
+pixi run smart-app --ehr hapi      # public HAPI server, no login
+pixi run smart-app --ehr epic      # via your Epic backend app (see Epic setup below)
 ```
 
-Step-by-step: [docs/setup/cerner-account.md](docs/setup/cerner-account.md). Registration is manual because Oracle provides no API for it.
+Optional signed-in Cerner SMART session: `pixi run smart-setup --ehr cerner` prints the values to enter in code Console and saves the client ID ([step-by-step](docs/setup/cerner-account.md)); registration is manual because Oracle provides no API for it. Epic in the dashboard: [docs/setup/epic-dashboard.md](docs/setup/epic-dashboard.md).
 
 ## Epic setup (optional)
 
@@ -70,8 +71,8 @@ Host `keys/public_jwks.json` at a **`raw.githubusercontent.com`** URL (a Gist UR
 ## Commands
 
 ```bash
-pixi run smart-app                       # patient dashboard (Cerner open sandbox)
-pixi run smart-setup                     # optional: signed-in SMART session setup
+pixi run smart-app [--ehr cerner|epic|hapi]   # patient dashboard
+pixi run smart-setup --ehr cerner             # optional: signed-in Cerner SMART session
 pixi run patient [name]                  # keys depend on EHR_TYPE
 pixi run observations [name] [--category vital-signs] [--count 10]
 pixi run list-patients                   # test patients for the active EHR
@@ -92,7 +93,7 @@ Any other FHIR ID can be passed directly, e.g. `pixi run patient 12724065`. Run 
 ## Project structure
 
 ```
-epic_sandbox/
+ehr_sandbox/
 ├── ehr/                     # multi-EHR client package
 │   ├── base.py              # BaseEHRClient interface
 │   ├── factory.py           # ClientFactory (selects by EHR_TYPE)
@@ -101,7 +102,7 @@ epic_sandbox/
 │   ├── hapi.py              # HAPI: local, no auth
 │   └── patients.py          # test patients per EHR
 ├── demos/                   # demo_01_patient.py, demo_02_observations.py
-├── smart-app/               # browser patient dashboard (open + signed-in SMART)
+├── smart-app/               # browser dashboard: Cerner, Epic, HAPI profiles
 ├── keys/                    # Epic key generation (private key gitignored)
 ├── docs/                    # Zensical documentation source
 ├── cli.py                   # Typer CLI (all pixi tasks point here)

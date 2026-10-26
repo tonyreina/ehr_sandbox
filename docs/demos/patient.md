@@ -61,6 +61,15 @@ client  = ClientFactory.from_env()
 patient = client.get_patient(patient_id)
 ```
 
+```mermaid
+flowchart LR
+    A["pixi run patient nancy"] --> B["resolve key for EHR_TYPE (ehr/patients.py)"]
+    B --> C["ClientFactory.from_env()"]
+    C --> D["client.get_patient(id)"]
+    D --> E["GET /Patient/id"]
+    E --> F["Print name, DOB, gender, ID"]
+```
+
 ## FHIR resource
 
 Reads from the R4 `Patient` resource:

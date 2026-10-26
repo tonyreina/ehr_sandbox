@@ -25,7 +25,8 @@
 Depending on the backend you want to use:
 
 - **Cerner (Oracle Health) open sandbox:** nothing else. No account needed. See [Cerner Sandbox](cerner-sandbox.md).
-- **Cerner signed-in SMART mode (optional):** a free CernerCare account for code Console. See [Cerner Account & Registration](cerner-account.md).
+- **Cerner signed-in SMART mode (optional):** a CernerCare account for code Console. See [Cerner Account & Registration](cerner-account.md).
+- **Epic in the browser dashboard:** nothing extra; it reuses the backend app. See [Epic in the Dashboard](epic-dashboard.md).
 - **Epic:** an **Epic developer account** at [fhir.epic.com](https://fhir.epic.com) and a **GitHub account** (to host your public JWK Set at a `raw.githubusercontent.com` URL; see [Keys](keys.md)).
 
 ## Installation

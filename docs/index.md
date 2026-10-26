@@ -6,6 +6,24 @@ The project is built around a multi-EHR abstraction layer — swap `EHR_TYPE` in
 
 Based on [FHIR Practical Interoperability](https://www.doctorswhocode.blog/blog/fhir-practical-interoperability/).
 
+## How it fits together
+
+```mermaid
+flowchart LR
+    CLI["pixi run patient / observations"] --> F[ClientFactory]
+    Demos[demos/*.py] --> F
+    F -->|EHR_TYPE=epic| EP[EpicClient]
+    F -->|EHR_TYPE=cerner| CE[CernerClient]
+    F -->|EHR_TYPE=hapi| HA[HapiFhirClient]
+    EP -->|"JWT client credentials"| EPIC[(Epic sandbox)]
+    CE -->|"no auth"| CERN[(Cerner open sandbox)]
+    HA -->|"no auth"| HAPI[("HAPI server (local or public)")]
+    DASH["pixi run smart-app (browser dashboard)"] -->|"no login"| CERN
+    DASH -->|"no login"| HAPI
+    DASH -.->|"optional SMART sign-in"| CERNS[(Cerner secured sandbox)]
+    DASH -->|"local proxy, backend JWT"| EPIC
+```
+
 ## Supported EHR backends
 
 | `EHR_TYPE` | Status | Auth |
@@ -22,8 +40,8 @@ pixi run observations [name] [--category vital-signs] [--count 10]
 pixi run list-patients
 pixi run list-ehrs
 pixi run generate-keys
-pixi run smart-app        # patient dashboard on localhost (Cerner open sandbox, no login)
-pixi run smart-setup      # optional: signed-in SMART session setup
+pixi run smart-app        # patient dashboard on localhost: --ehr cerner | epic | hapi
+pixi run smart-setup      # optional: register a signed-in Cerner SMART session
 ```
 
 See [Setup → Prerequisites](setup/prerequisites.md) to get started, or [EHR Clients](ehr-clients.md) for the architecture.

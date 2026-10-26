@@ -2328,5 +2328,5 @@ packages:
   size: 387535
   timestamp: 1786599623274
 - pypi: ./
-  name: epic-fhir-sandbox
+  name: ehr-sandbox
   requires_python: '>=3.15'

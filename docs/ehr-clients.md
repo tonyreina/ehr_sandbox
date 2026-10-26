@@ -4,15 +4,44 @@ The `ehr/` package provides a thin abstraction layer so the demos and CLI work a
 
 ## Architecture
 
+```mermaid
+classDiagram
+    class BaseEHRClient {
+        <<abstract>>
+        +ehr_name str
+        +fhir_base str
+        +get_patient(patient_id) dict
+        +get_observations(patient_id, category, count) list
+        +from_env()$ BaseEHRClient
+    }
+    class ClientFactory {
+        -_registry dict
+        +register(ehr_type)$
+        +from_env()$ BaseEHRClient
+        +available()$ list
+    }
+    class EpicClient {
+        epic.py
+        JWT client credentials RS384
+        token caching
+    }
+    class CernerClient {
+        cerner.py
+        Oracle Health open sandbox
+        no auth
+    }
+    class HapiFhirClient {
+        hapi.py
+        local server
+        no auth
+    }
+    BaseEHRClient <|-- EpicClient
+    BaseEHRClient <|-- CernerClient
+    BaseEHRClient <|-- HapiFhirClient
+    ClientFactory o-- BaseEHRClient : registry
 ```
-ehr/
-├── base.py      BaseEHRClient   — abstract interface every client must satisfy
-├── factory.py   ClientFactory   — registry + from_env() entrypoint
-├── epic.py      EpicClient      — JWT client credentials (RS384), token caching
-├── cerner.py    CernerClient    — Oracle Health open sandbox, no auth
-├── patients.py  test patients per EHR + default selection
-└── hapi.py      HapiFhirClient  — unauthenticated, for local dev
-```
+
+Test patients per EHR and their defaults live in `ehr/patients.py`. The browser dashboard (`smart-app/`) does not use these Python clients; it has its own EHR profiles in `smart-app/config.js`, see [Demo 3](demos/smart-app.md).
 
 ### BaseEHRClient
 
@@ -39,6 +68,19 @@ class EpicClient(BaseEHRClient):
 ```
 
 `ehr/__init__.py` imports every module to trigger registration. The factory then resolves the active client at runtime:
+
+```mermaid
+flowchart LR
+    ENV[".env: EHR_TYPE"] --> F["ClientFactory.from_env()"]
+    F --> R{"registered?"}
+    R -- epic --> E[EpicClient]
+    R -- cerner --> C[CernerClient]
+    R -- hapi --> H[HapiFhirClient]
+    R -- unknown --> X["ValueError listing available backends"]
+    E --> D["demos and CLI"]
+    C --> D
+    H --> D
+```
 
 ```python
 from ehr import ClientFactory
