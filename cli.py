@@ -209,6 +209,9 @@ def hapi_load(
     seed: Annotated[int, typer.Option("--seed", "-s", help="Synthea random seed (same seed, same patients)")] = 42,
     state: Annotated[str, typer.Option(help="US state to simulate")] = "Massachusetts",
     force: Annotated[bool, typer.Option("--force", help="Load even if the server already has patients")] = False,
+    numbered_names: Annotated[bool, typer.Option(
+        "--numbered-names/--plain-names",
+        help="Synthea's own names carry random digits (Erin498); plain names are the default")] = False,
 ):
     """Generate Synthea patients and load them into the local HAPI server (run hapi-up first)."""
     from ehr import hapi_local
@@ -221,7 +224,7 @@ def hapi_load(
                    "`pixi run hapi-down --delete-data` to start empty.", err=True)
         raise typer.Exit(1)
     typer.echo(f"Generating {patients} Synthea patients ({state}, seed {seed}); the first run downloads Synthea (~200 MB)...")
-    fhir_dir = hapi_local.generate(patients, seed, state)
+    fhir_dir = hapi_local.generate(patients, seed, state, numbered_names)
     typer.echo("Loading into HAPI (about 4 s per patient)...")
     for i, (name, n) in enumerate(hapi_local.load(fhir_dir), 1):
         typer.echo(f"  {i:>3}  {name[:50]:<50} {n} resources")

@@ -104,7 +104,7 @@ Run a local HAPI FHIR server in Docker and fill it with synthetic [Synthea](http
 
 ```bash
 pixi run hapi-up                       # start HAPI at http://localhost:8080/fhir
-pixi run hapi-load [-p 25] [-s 42]     # generate and load Synthea patients
+pixi run hapi-load [-p 25] [-s 42]     # generate and load Synthea patients (--numbered-names keeps Synthea's digits)
 pixi run hapi-down [--delete-data]     # stop (patients are kept unless --delete-data)
 ```
 

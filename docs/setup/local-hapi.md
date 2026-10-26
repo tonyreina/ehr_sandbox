@@ -20,6 +20,7 @@ pixi run hapi-load      # generates 25 Synthea patients and loads them (about 2 
 | `--patients`, `-p` | `25` | Living patients to generate (Synthea also creates some who died during the simulation, so you get a few more) |
 | `--seed`, `-s` | `42` | Random seed; the same seed gives the same patients |
 | `--state` | `Massachusetts` | US state to simulate |
+| `--plain-names` / `--numbered-names` | plain | Synthea's own names carry random digits to look obviously fake (`Erin498 Sulema841 McClure239`); plain names (`Erin Sulema McClure`) are the default. Plain names are synthetic but could match real people. |
 | `--force` | off | Load even when the server already has patients (adds more) |
 
 Patients are stored in a Docker volume, so they survive restarts. To stop the server or start over:
@@ -39,7 +40,7 @@ pixi run observations <fhir-id> --ehr hapi --category vital-signs
 pixi run smart-app --ehr hapi                  # the dashboard, on your local data
 ```
 
-HAPI has no fixed test patients, so the commands use the server's own patients (`list-patients` shows them). Synthea names carry numeric suffixes (for example `Chester802 Aufderhar910`) by design.
+HAPI has no fixed test patients, so the commands use the server's own patients (`list-patients` shows them).
 
 `pixi run smart-app` uses the local server for the HAPI profile whenever it is running, else the public `hapi.fhir.org` test server. To point the Python commands and the dashboard at a different server, set it in `.env`:
 

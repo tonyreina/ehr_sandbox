@@ -85,8 +85,12 @@ def patient_count(base: str = BASE) -> int:
     return requests.get(f"{base}/Patient", params={"_summary": "count"}, timeout=30).json().get("total", 0)
 
 
-def generate(patients: int, seed: int, state: str) -> Path:
-    """Run Synthea in Docker; returns the directory of FHIR bundles."""
+def generate(patients: int, seed: int, state: str, numbered_names: bool = False) -> Path:
+    """Run Synthea in Docker; returns the directory of FHIR bundles.
+
+    Synthea appends random digits to person names (Erin498) so they are obviously fake; by default
+    they are left off here.
+    """
     SYNTHEA_DIR.mkdir(parents=True, exist_ok=True)
     if not SYNTHEA_JAR.exists():
         urllib.request.urlretrieve(SYNTHEA_URL, SYNTHEA_JAR)
@@ -99,6 +103,7 @@ def generate(patients: int, seed: int, state: str) -> Path:
         "-p", str(patients), "-s", str(seed), "--exporter.baseDirectory=/synthea/output",
         "--exporter.fhir.export=true", "--exporter.fhir.use_us_core_ig=false",
         "--exporter.hospital.fhir.export=true", "--exporter.practitioner.fhir.export=true",
+        f"--generate.append_numbers_to_person_names={str(numbered_names).lower()}",
         state,
     )
     return out / "fhir"
