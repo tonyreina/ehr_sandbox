@@ -19,6 +19,16 @@ pixi run smart-app --ehr epic     # Epic: uses your backend app from .env and ke
 
 `--ehr` only sets the starting EHR (default: `EHR_TYPE` from `.env`, else Cerner); the page's EHR dropdown switches at any time. Use the **Patient** dropdown or the name search (for example `smart`) to switch patients.
 
+## Screenshots
+
+Oracle Health (Cerner) open sandbox, no login:
+
+![Dashboard on the Oracle Health (Cerner) open sandbox](oracle_ehr_app.png)
+
+Epic through the local proxy (Epic finds patients by name only together with a birth date):
+
+![Dashboard on the Epic sandbox via the local proxy](epic_ehr_app.png)
+
 ## What it shows
 
 The page is laid out like a clinical chart: an app bar with the EHR and patient selectors, a **patient banner** (name, sex, age, DOB, ID, and allergy / problem chips), and an activity **sidebar** that tracks the section in view.
