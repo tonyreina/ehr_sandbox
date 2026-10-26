@@ -18,9 +18,9 @@ pixi run observations [name] [OPTIONS]
 ## Examples
 
 ```bash
-pixi run observations                              # theodore, laboratory
-pixi run observations camila --category vital-signs
-pixi run observations camila --count 5
+pixi run observations --ehr epic                   # theodore, laboratory
+pixi run observations camila --ehr epic --category vital-signs
+pixi run observations camila --ehr epic --count 5
 pixi run observations derrick --ehr epic --category social-history
 pixi run observations nancy --ehr cerner --category vital-signs --count 5
 ```

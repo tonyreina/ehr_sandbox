@@ -100,7 +100,7 @@ HAPI_FHIR_BASE=http://localhost:8080/fhir
 
 ```bash
 pixi run list-ehrs   # shows active backend
-pixi run patient camila
+pixi run patient <fhir-id>
 ```
 
 Or pick the backend for a single command with `--ehr`, leaving `.env` alone:

@@ -42,10 +42,10 @@ opens a browser dashboard on the same open sandbox with no login. See [Demo 3](.
 ## Run the demos
 
 ```bash
-pixi run list-patients
-pixi run patient nancy
-pixi run observations joe
-pixi run observations nancy --category vital-signs --count 5
+pixi run list-patients --ehr cerner
+pixi run patient nancy --ehr cerner
+pixi run observations joe --ehr cerner
+pixi run observations nancy --ehr cerner --category vital-signs --count 5
 ```
 
 ## Test patients
@@ -57,7 +57,7 @@ pixi run observations nancy --category vital-signs --count 5
 | `wilm` | Wilm Smart | 1990-09-15 | M | `12724065` |
 | `tim` | Tim Peters | 1990-09-15 | M | `12742400` |
 
-Any other FHIR ID can be passed directly, e.g. `pixi run patient 12724065`.
+Any other FHIR ID can be passed directly, e.g. `pixi run patient 12724065 --ehr cerner`.
 
 ## Differences from Epic
 
