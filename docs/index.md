@@ -42,6 +42,7 @@ pixi run list-ehrs
 pixi run generate-keys
 pixi run smart-app        # patient dashboard on localhost: --ehr cerner | epic | hapi
 pixi run smart-setup      # optional: register a signed-in Cerner SMART session
+pixi run hapi-up          # local HAPI server in Docker (then: pixi run hapi-load)
 ```
 
 See [Setup → Prerequisites](setup/prerequisites.md) to get started, or [EHR Clients](ehr-clients.md) for the architecture.

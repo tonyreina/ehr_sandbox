@@ -51,8 +51,24 @@ def _client():
     return ClientFactory.from_env(_ehr_type())
 
 
+def _hapi_patients(count: int = 20) -> list[tuple[str, str]]:
+    """(FHIR id, display name) for the patients on the HAPI server."""
+    from ehr.hapi import HapiFhirClient
+    try:
+        found = HapiFhirClient.from_env().list_patients(count)
+    except Exception as e:
+        raise typer.BadParameter(f"Cannot list patients on the HAPI server ({e}). Start it with `pixi run hapi-up`.")
+    names = lambda p: " ".join((p.get("name") or [{}])[0].get("given", [])[:1] + [(p.get("name") or [{}])[0].get("family", "")])
+    return [(p["id"], names(p)) for p in found]
+
+
 def _resolve(name: Optional[str], observations: bool = False) -> tuple[str, str]:
     from ehr.patients import resolve
+    if name is None and _ehr_type() == "hapi":      # no fixed test patients: use the first one on the server
+        found = _hapi_patients(1)
+        if not found:
+            raise typer.BadParameter("The HAPI server has no patients. Run `pixi run hapi-load`.")
+        return found[0][1], found[0][0]
     try:
         return resolve(_ehr_type(), name, observations=observations)
     except ValueError as e:
@@ -137,6 +153,11 @@ def list_patients(ehr: EhrOption = None):
     _use_ehr(ehr)
     from ehr.patients import patients_for
     header = f"{'Key':<12} {'Name':<20} {'DOB':<12} {'Sex'}  {'FHIR ID'}"
+    if _ehr_type() == "hapi":                       # no fixed test patients: list what the server holds
+        typer.echo(f"{'FHIR ID':<40} Name")
+        for pid, name in _hapi_patients():
+            typer.echo(f"{pid:<40} {name}")
+        return
     patients = patients_for(_ehr_type())
     if not patients:
         typer.echo(f"No known test patients for EHR_TYPE={_ehr_type()!r}.")
@@ -156,6 +177,56 @@ def list_ehrs(ehr: EhrOption = None):
     for name in ClientFactory.available():
         marker = " ← active" if name == current else ""
         typer.echo(f"  {name}{marker}")
+
+
+@app.command("hapi-up")
+def hapi_up():
+    """Start a local HAPI FHIR server in Docker (data persists in a Docker volume)."""
+    from ehr import hapi_local
+    typer.echo("Starting HAPI (first start pulls the image and takes a minute)...")
+    try:
+        base = hapi_local.up()
+    except Exception as e:
+        typer.echo(f"Could not start HAPI: {e}", err=True)
+        raise typer.Exit(1)
+    typer.echo(f"HAPI is ready: {base}  ({hapi_local.patient_count()} patients)")
+    typer.echo("Next: pixi run hapi-load      then: pixi run smart-app --ehr hapi")
+
+
+@app.command("hapi-down")
+def hapi_down(
+    delete_data: Annotated[bool, typer.Option("--delete-data", help="Also delete the stored patients")] = False,
+):
+    """Stop the local HAPI server (patients are kept unless --delete-data)."""
+    from ehr import hapi_local
+    hapi_local.down(delete_data)
+    typer.echo("HAPI stopped" + (" and its data deleted." if delete_data else "; data kept."))
+
+
+@app.command("hapi-load")
+def hapi_load(
+    patients: Annotated[int, typer.Option("--patients", "-p", help="Living patients to generate")] = 25,
+    seed: Annotated[int, typer.Option("--seed", "-s", help="Synthea random seed (same seed, same patients)")] = 42,
+    state: Annotated[str, typer.Option(help="US state to simulate")] = "Massachusetts",
+    force: Annotated[bool, typer.Option("--force", help="Load even if the server already has patients")] = False,
+):
+    """Generate Synthea patients and load them into the local HAPI server (run hapi-up first)."""
+    from ehr import hapi_local
+    if not hapi_local.ready():
+        typer.echo("HAPI is not running. Start it with `pixi run hapi-up`.", err=True)
+        raise typer.Exit(1)
+    have = hapi_local.patient_count()
+    if have and not force:
+        typer.echo(f"The server already has {have} patients. Use --force to add more, or "
+                   "`pixi run hapi-down --delete-data` to start empty.", err=True)
+        raise typer.Exit(1)
+    typer.echo(f"Generating {patients} Synthea patients ({state}, seed {seed}); the first run downloads Synthea (~200 MB)...")
+    fhir_dir = hapi_local.generate(patients, seed, state)
+    typer.echo("Loading into HAPI (about 4 s per patient)...")
+    for i, (name, n) in enumerate(hapi_local.load(fhir_dir), 1):
+        typer.echo(f"  {i:>3}  {name[:50]:<50} {n} resources")
+    typer.echo(f"Done: {hapi_local.patient_count()} patients on {hapi_local.BASE}")
+    typer.echo("Try: pixi run list-patients --ehr hapi      pixi run smart-app --ehr hapi")
 
 
 SMART_EHRS = ("cerner",)            # EHRs with a browser SMART sign-in to register
@@ -307,6 +378,11 @@ def smart_app(
     import threading
 
     epic_ready = _epic_backend_ready()
+    # The dashboard's HAPI profile uses HAPI_FHIR_BASE from .env, else the local server when it is
+    # running (`pixi run hapi-up`), else the public hapi.fhir.org test server.
+    from ehr import hapi_local
+    hapi_base = os.getenv("HAPI_FHIR_BASE") or (hapi_local.BASE if hapi_local.ready() else None)
+    bases = {"hapi": hapi_base} if hapi_base else {}
     epic_client = None
     epic_lock = threading.Lock()
 
@@ -337,7 +413,8 @@ def smart_app(
             # Tells the page which EHR to start with and which proxies exist (static servers 404 this).
             if path == "/__ehr.js":
                 js = (f'window.SMART_DEFAULT_EHR = "{ehr}";\n'
-                      f"window.SMART_PROXY = {json.dumps({'epic': epic_ready})};\n")
+                      f"window.SMART_PROXY = {json.dumps({'epic': epic_ready})};\n"
+                      f"window.SMART_BASES = {json.dumps(bases)};\n")
                 return self._send(200, js.encode(), "text/javascript")
             # Read-only pass-through to Epic, authenticated server-side with the backend app.
             # The private key and the token never reach the browser.

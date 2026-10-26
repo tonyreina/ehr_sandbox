@@ -359,7 +359,7 @@ function requireSignIn(note) {
   profile = cfg.profiles[profileKey];
   // ?base= points an open profile at another server; a proxied profile (Epic) needs the CLI's proxy.
   const proxied = !!(profile.proxy && (window.SMART_PROXY || {})[profileKey]);
-  const openBase = q.get("base") || profile.openBase || (proxied ? new URL(profile.proxy, window.location.href).href : null);
+  const openBase = q.get("base") || (window.SMART_BASES || {})[profileKey] || profile.openBase || (proxied ? new URL(profile.proxy, window.location.href).href : null);
   setupEhrBar();
   setupSidebar();
 
