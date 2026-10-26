@@ -21,8 +21,11 @@ pixi run smart-app --ehr epic     # Epic: uses your backend app from .env and ke
 
 ## What it shows
 
+The page is laid out like a clinical chart: an app bar with the EHR and patient selectors, a **patient banner** (name, sex, age, DOB, ID, and allergy / problem chips), and an activity **sidebar** that tracks the section in view.
+
 - **Latest vitals** tiles and **trend charts** (blood pressure with systolic and diastolic, pulse, temperature, oxygen saturation, respiratory rate, weight). Hover or use the arrow keys for a crosshair tooltip; every chart has a *Table view*. Far-future sandbox timestamps are hidden and counted.
-- **Laboratory:** latest value per test with a sparkline of its history.
+- **Flowsheet:** vitals by day (newest first), the way nursing flowsheets show them.
+- **Results:** latest value per test with an **H / L / A flag** (the EHR's interpretation, else the reference range), the reference range and a sparkline of its history.
 - **Medications, allergies, encounters, problems.** Each section loads independently, so a slow or forbidden resource never blocks the page.
 
 The sandboxes are shared and their data is synthetic (for example implausible potassium values) and changes over time. Some Cerner searches are slow: labs take ~10 s and problems can take 30+ s, so those sections show *Loading…* and problems give up after 45 s.

@@ -73,6 +73,26 @@ function buildVitalChart(spec, observations, now = Date.now()) {
   return { key: spec.key, title: spec.title, unit, series, hiddenFuture: Math.round(hiddenFuture / spec.series.length) };
 }
 
+// Abnormal flag for a result: the EHR's own interpretation when given, else the reference range.
+function labFlag(o, value) {
+  const code = ((o.interpretation || []).flatMap(i => i.coding || [])[0] || {}).code;
+  if (code && code !== "N") return code;                     // H, L, HH, LL, A, ...
+  const r = (o.referenceRange || [])[0] || {};
+  if (r.high && typeof r.high.value === "number" && value > r.high.value) return "H";
+  if (r.low && typeof r.low.value === "number" && value < r.low.value) return "L";
+  return "";
+}
+
+function rangeText(o) {
+  const r = (o.referenceRange || [])[0] || {};
+  if (r.text) return r.text;
+  const lo = r.low && r.low.value, hi = r.high && r.high.value;
+  if (lo !== undefined && hi !== undefined) return `${lo}–${hi}`;
+  if (hi !== undefined) return `≤ ${hi}`;
+  if (lo !== undefined) return `≥ ${lo}`;
+  return "";
+}
+
 // Latest numeric result per test, with its history, for the lab table.
 function groupLabs(observations, now = Date.now()) {
   const groups = new Map();
@@ -82,7 +102,8 @@ function groupLabs(observations, now = Date.now()) {
     if (!q || Number.isNaN(t) || t > now) continue;
     const key = loincCodes(o)[0] || codeText(o);
     if (!groups.has(key)) groups.set(key, { name: codeText(o), unit: q.unit, points: [] });
-    groups.get(key).points.push({ t, v: q.value, date: o.effectiveDateTime.slice(0, 10) });
+    groups.get(key).points.push({ t, v: q.value, date: o.effectiveDateTime.slice(0, 10),
+                                  flag: labFlag(o, q.value), range: rangeText(o) });
   }
   return [...groups.values()]
     .map(g => { g.points.sort((a, b) => a.t - b.t); g.latest = g.points[g.points.length - 1]; return g; })
@@ -93,6 +114,29 @@ function groupLabs(observations, now = Date.now()) {
 function dedupeText(s) {
   const t = (s || "").trim(), half = Math.floor(t.length / 2);
   return t.length > 3 && t.slice(0, half).trim() === t.slice(half).trim() ? t.slice(0, half).trim() : t;
+}
+
+// Flowsheet: one row per vital, one column per day (newest first), last reading of each day.
+function buildFlowsheet(charts, maxCols = 6) {
+  const days = [...new Set(charts.flatMap(c => c.series.flatMap(s => s.points.map(p => p.date))))]
+    .sort().reverse().slice(0, maxCols);
+  const rows = charts.filter(c => c.series.some(s => s.points.length)).map(c => ({
+    label: c.title, unit: c.unit,
+    cells: days.map(d => {
+      const vals = c.series.map(s => { const ps = s.points.filter(p => p.date === d); return ps.length ? ps[ps.length - 1].v : null; });
+      if (vals.every(v => v === null)) return "";
+      return vals.map(v => (v === null ? "–" : Number(v.toFixed(1)).toString())).join("/");
+    }),
+  }));
+  return { days, rows: rows.filter(r => r.cells.some(Boolean)) };   // drop vitals not taken on these days
+}
+
+function initials(name) {
+  const parts = (name || "").replace(/,/g, " ").split(/\s+/).filter(Boolean);
+  if (!parts.length) return "?";
+  // "LAST, FIRST" (Cerner text) vs "First Last": prefer first-name initial first.
+  const [first, last] = /,/.test(name || "") ? [parts[1] || "", parts[0]] : [parts[0], parts[parts.length - 1]];
+  return ((first[0] || "") + (last && last !== first ? last[0] : "")).toUpperCase();
 }
 
 function medications(resources) {
@@ -182,5 +226,5 @@ function canBrowsePatients(signedIn, scopeString) {
 }
 
 if (typeof module !== "undefined") {
-  module.exports = { chooseProfile, clientIdFor, scopesFor, canBrowsePatients, patientName, ageFromBirthDate, VITALS, buildVitalChart, groupLabs, medications, allergies, encounters, conditions };
+  module.exports = { labFlag, rangeText, buildFlowsheet, initials, chooseProfile, clientIdFor, scopesFor, canBrowsePatients, patientName, ageFromBirthDate, VITALS, buildVitalChart, groupLabs, medications, allergies, encounters, conditions };
 }

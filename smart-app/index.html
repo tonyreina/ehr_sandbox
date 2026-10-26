@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Patient Dashboard</title>
+  <title>Patient Chart</title>
   <link rel="icon" href="data:,">
   <link rel="stylesheet" href="style.css">
   <script src="https://cdn.jsdelivr.net/npm/fhirclient@2.5.2/build/fhir-client.js"></script>
@@ -15,56 +15,102 @@
   <script src="app.js" defer></script>
 </head>
 <body>
-  <header>
-    <h1>Patient dashboard</h1>
-    <p id="mode" class="muted"></p>
-    <div class="filters" id="ehr-bar">
-      <label for="ehr-select">EHR</label>
-      <select id="ehr-select"></select>
-      <button id="signin" type="button" hidden>Sign in</button>
+  <header class="appbar">
+    <div class="brand"><span class="brand-mark" aria-hidden="true">+</span>FHIR Sandbox Chart</div>
+    <div class="appbar-tools">
+      <div id="ehr-bar" class="tool">
+        <label for="ehr-select">EHR</label>
+        <select id="ehr-select"></select>
+        <button id="signin" type="button" hidden>Sign in</button>
+      </div>
+      <form id="picker" class="tool" hidden>
+        <label for="patient-select">Patient</label>
+        <select id="patient-select"></select>
+        <input id="search" type="search" placeholder="Find patient by name" size="18" aria-label="Search patients by name">
+        <input id="search-dob" type="date" aria-label="Birth date" title="Birth date (required by this EHR)" hidden>
+        <button id="search-btn" type="submit">Search</button>
+      </form>
     </div>
-    <p id="notice" class="error" role="alert" hidden></p>
-    <p id="status" class="muted" role="status"></p>
   </header>
 
-  <form id="picker" class="filters" hidden>
-    <label for="patient-select">Patient</label>
-    <select id="patient-select"></select>
-    <input id="search" type="search" placeholder="Search by name (e.g. smart)" size="22" aria-label="Search patients by name">
-    <input id="search-dob" type="date" aria-label="Birth date" title="Birth date (required by this EHR)" hidden>
-    <button id="search-btn" type="submit">Search</button>
-  </form>
+  <div class="strip">
+    <p id="mode"></p>
+    <p id="notice" class="error" role="alert" hidden></p>
+    <p id="status" role="status"></p>
+  </div>
 
-  <main id="dash" hidden>
-    <section id="summary" class="card">
-      <h2 id="name"></h2>
-      <p id="demographics" class="muted"></p>
+  <div id="dash" hidden>
+    <section class="banner" aria-label="Patient banner">
+      <div class="avatar" id="avatar" aria-hidden="true"></div>
+      <div class="banner-main">
+        <h1 id="name"></h1>
+        <p id="demographics"></p>
+      </div>
+      <div class="banner-chips">
+        <span class="chip chip-alert" id="chip-allergies">Allergies: loading…</span>
+        <span class="chip" id="chip-problems">Problems: loading…</span>
+        <span class="chip" id="chip-source"></span>
+      </div>
     </section>
 
-    <section>
-      <h2>Latest vitals</h2>
-      <div id="tiles" class="tiles"></div>
-    </section>
+    <div class="layout">
+      <nav class="sidebar" aria-label="Chart sections">
+        <a href="#sec-summary">Summary</a>
+        <a href="#sec-vitals">Vitals</a>
+        <a href="#sec-flowsheet">Flowsheet</a>
+        <a href="#sec-results">Results</a>
+        <a href="#sec-meds">Medications</a>
+        <a href="#sec-allergies">Allergies</a>
+        <a href="#sec-encounters">Encounters</a>
+        <a href="#sec-problems">Problems</a>
+      </nav>
 
-    <section>
-      <h2>Vital sign trends</h2>
-      <p id="future-note" class="muted" hidden></p>
-      <div id="charts" class="grid"></div>
-    </section>
+      <main>
+        <section class="panel" id="sec-summary">
+          <h2 class="panel-head">Summary <span class="panel-sub">latest vitals</span></h2>
+          <div class="panel-body"><div id="tiles" class="tiles"></div></div>
+        </section>
 
-    <section>
-      <h2>Laboratory</h2>
-      <div id="labs"></div>
-    </section>
+        <section class="panel" id="sec-vitals">
+          <h2 class="panel-head">Vitals <span class="panel-sub">trends</span></h2>
+          <div class="panel-body">
+            <p id="future-note" class="muted" hidden></p>
+            <div id="charts" class="grid"></div>
+          </div>
+        </section>
 
-    <section><h2>Medications</h2><div id="meds"></div></section>
+        <section class="panel" id="sec-flowsheet">
+          <h2 class="panel-head">Flowsheet <span class="panel-sub">last reading per day</span></h2>
+          <div class="panel-body" id="flowsheet"></div>
+        </section>
 
-    <div class="grid two">
-      <section><h2>Allergies</h2><div id="allergies"></div></section>
-      <section><h2>Encounters</h2><div id="encounters"></div></section>
+        <section class="panel" id="sec-results">
+          <h2 class="panel-head">Results <span class="panel-sub">laboratory</span></h2>
+          <div class="panel-body" id="labs"></div>
+        </section>
+
+        <section class="panel" id="sec-meds">
+          <h2 class="panel-head">Medications</h2>
+          <div class="panel-body" id="meds"></div>
+        </section>
+
+        <div class="grid two">
+          <section class="panel" id="sec-allergies">
+            <h2 class="panel-head">Allergies</h2>
+            <div class="panel-body" id="allergies"></div>
+          </section>
+          <section class="panel" id="sec-encounters">
+            <h2 class="panel-head">Encounters</h2>
+            <div class="panel-body" id="encounters"></div>
+          </section>
+        </div>
+
+        <section class="panel" id="sec-problems">
+          <h2 class="panel-head">Problem list</h2>
+          <div class="panel-body" id="conditions"></div>
+        </section>
+      </main>
     </div>
-
-    <section><h2>Problems</h2><div id="conditions"></div></section>
-  </main>
+  </div>
 </body>
 </html>

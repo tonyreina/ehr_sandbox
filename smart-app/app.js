@@ -88,12 +88,30 @@ function renderLabs(observations) {
   const groups = groupLabs(observations);
   const box = $("labs"); box.replaceChildren();
   if (!groups.length) return box.append(el("p", "No numeric lab results.", "muted"));
+  const flagged = groups.filter(g => g.latest.flag);
   box.append(simpleTable(
-    ["Test", "Latest", "Date", "Trend", "Results"],
-    groups.slice(0, 12).map(g => [g.name, `${g.latest.v} ${g.unit}`, g.latest.date, sparkline(g.points), String(g.points.length)]),
-    [1, 4]));
-  if (groups.length > 12) box.append(el("p", `…and ${groups.length - 12} more tests.`, "muted"));
+    ["Test", "Result", "Flag", "Ref range", "Date", "Trend", "#"],
+    groups.slice(0, 15).map(g => {
+      const f = g.latest.flag;
+      const value = el("span", `${g.latest.v} ${g.unit}`, f ? (/^L/.test(f) ? "abnormal-low" : "abnormal") : undefined);
+      return [g.name, value, f ? el("span", f, `flag flag-${f}`) : "", g.latest.range || "", g.latest.date,
+              sparkline(g.points), String(g.points.length)];
+    }),
+    [1, 6]));
+  if (flagged.length) box.prepend(el("p", `${flagged.length} abnormal latest result${flagged.length > 1 ? "s" : ""} (flagged H/L/A).`, "muted"));
+  if (groups.length > 15) box.append(el("p", `…and ${groups.length - 15} more tests.`, "muted"));
 }
+
+function renderFlowsheet(charts) {
+  const { days, rows } = buildFlowsheet(charts);
+  const box = $("flowsheet"); box.replaceChildren();
+  if (!rows.length) return box.append(el("p", "No vital-sign readings.", "muted"));
+  const wrap = simpleTable(["Vital", ...days], rows.map(r => [`${r.label} (${r.unit})`, ...r.cells]));
+  wrap.querySelector("table").classList.add("flowsheet");
+  box.append(wrap);
+}
+
+function setChip(id, text) { $(id).textContent = text; }
 
 const MAX_ROWS = 10;
 function renderList(id, rows, headers, empty, noun) {
@@ -117,7 +135,7 @@ async function bundle(client, query, { timeout = 0 } = {}) {
 }
 
 // Fills a section independently so one slow or forbidden resource never blocks the page.
-async function section(token, id, load, render) {
+async function section(token, id, load, render, onFail) {
   const box = $(id);
   box.replaceChildren(el("p", "Loading… (the sandbox can take 10+ seconds)", "muted loading"));
   try {
@@ -125,6 +143,7 @@ async function section(token, id, load, render) {
     if (token === current) render(data);
   } catch (e) {
     if (token !== current) return;
+    if (onFail) onFail(e);
     box.replaceChildren(el("p", /40[13]|insufficient/i.test(e.message)
       ? (profile.proxy
         ? `Not authorized. Add this resource's read/search API to your ${profile.name} backend app.`
@@ -149,24 +168,33 @@ async function loadPatient(client, patientId) {
   if (token !== current) return;
   $("status").textContent = "";
   const age = ageFromBirthDate(p.birthDate);
-  $("name").textContent = patientName(p);
-  $("demographics").textContent = [p.gender, age !== null ? `${age} years` : null,
-    p.birthDate ? `born ${p.birthDate}` : null, `ID ${p.id}`].filter(Boolean).join(" · ");
+  const name = patientName(p);
+  $("name").textContent = name;
+  $("avatar").textContent = initials(name);
+  $("demographics").textContent = [p.gender ? p.gender[0].toUpperCase() + p.gender.slice(1) : null,
+    age !== null ? `${age} y` : null, p.birthDate ? `DOB ${p.birthDate}` : null, `ID ${p.id}`].filter(Boolean).join(" · ");
+  setChip("chip-allergies", "Allergies: loading…");
+  setChip("chip-problems", "Problems: loading…");
+  setChip("chip-source", profile.name);
+  $("flowsheet").replaceChildren(el("p", "Loading…", "muted loading"));
   $("dash").hidden = false;
 
   const obs = category => () => bundle(client, `Observation?patient=${pid}&category=${category}&_sort=-date&_count=100`);
   await Promise.all([
     section(token, "charts", obs("vital-signs"), data => {
       const charts = VITALS.map(spec => buildVitalChart(spec, data));
-      renderTiles(charts); renderCharts(charts);
-    }),
+      renderTiles(charts); renderCharts(charts); renderFlowsheet(charts);
+    }, () => $("flowsheet").replaceChildren(el("p", "Unavailable.", "muted"))),
     section(token, "labs", obs("laboratory"), renderLabs),
     section(token, "meds", () => bundle(client, `MedicationRequest?patient=${pid}&_count=50`), rs =>
       renderList("meds", medications(rs).map(m => [m.name, m.dose, badge(m.status)]),
         ["Medication", "Dose", "Status"], "No medications on file.", "medications")),
-    section(token, "allergies", () => bundle(client, `AllergyIntolerance?patient=${pid}&_count=50`), rs =>
-      renderList("allergies", allergies(rs).map(a => [a.name, a.reactions, badge(a.criticality)]),
-        ["Allergen", "Reactions", "Criticality"], "No known allergies on file.", "allergies")),
+    section(token, "allergies", () => bundle(client, `AllergyIntolerance?patient=${pid}&_count=50`), rs => {
+      const as = allergies(rs);
+      setChip("chip-allergies", as.length ? `Allergies (${as.length})` : "No known allergies");
+      renderList("allergies", as.map(a => [a.name, a.reactions, badge(a.criticality)]),
+        ["Allergen", "Reactions", "Criticality"], "No known allergies on file.", "allergies");
+    }, () => setChip("chip-allergies", "Allergies: unavailable")),
     section(token, "encounters", () => bundle(client, `Encounter?patient=${pid}&_count=20`), rs => {
       const es = encounters(rs);
       // The sandbox often has no encounter dates; show where instead of a column of dashes.
@@ -176,9 +204,12 @@ async function loadPatient(client, patientId) {
         [...(dated ? ["Date"] : []), "Type", "Location", "Status"], "No encounters on file.", "encounters");
     }),
     // The sandbox is slow for Condition searches on large test charts, so bound the wait.
-    section(token, "conditions", () => bundle(client, `Condition?patient=${pid}${profile.conditionCategory ? `&category=${profile.conditionCategory}` : ""}`, { timeout: 45000 }), rs =>
-      renderList("conditions", conditions(rs).map(c => [c.name, c.date || "–", badge(c.status)]),
-        ["Problem", "Onset", "Status"], "No problems on file.", "problems")),
+    section(token, "conditions", () => bundle(client, `Condition?patient=${pid}${profile.conditionCategory ? `&category=${profile.conditionCategory}` : ""}`, { timeout: 45000 }), rs => {
+      const cs = conditions(rs), active = cs.filter(c => c.status === "active").length;
+      setChip("chip-problems", cs.length ? `Problems (${active} active of ${cs.length})` : "No problems on file");
+      renderList("conditions", cs.map(c => [c.name, c.date || "–", badge(c.status)]),
+        ["Problem", "Onset", "Status"], "No problems on file.", "problems");
+    }, () => setChip("chip-problems", "Problems: unavailable")),
   ]);
 }
 
@@ -187,8 +218,9 @@ async function loadPatient(client, patientId) {
 function fillPicker(select, options, selected) {
   select.replaceChildren();
   for (const o of options) {
-    const opt = el("option", `${o.label} (${o.id})`);
+    const opt = el("option", o.label);         // the banner shows the id
     opt.value = o.id;
+    opt.title = o.id;
     select.append(opt);
   }
   if (selected) select.value = selected;
@@ -263,6 +295,18 @@ function setupEhrBar() {
   $("signin").hidden = !profile.standaloneIss;
 }
 
+// Highlight the sidebar link of the section in view.
+function setupSidebar() {
+  const links = [...document.querySelectorAll(".sidebar a")];
+  if (!("IntersectionObserver" in window)) return;
+  const io = new IntersectionObserver(entries => {
+    const seen = entries.filter(e => e.isIntersecting).sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0];
+    if (!seen) return;
+    for (const a of links) a.classList.toggle("active", a.getAttribute("href") === `#${seen.target.id}`);
+  }, { rootMargin: "-130px 0px -55% 0px" });
+  for (const a of links) { const s = document.querySelector(a.getAttribute("href")); if (s) io.observe(s); }
+}
+
 // ---- start-up ---------------------------------------------------------------------------------
 
 async function start(client, mode, note) {
@@ -317,6 +361,7 @@ function requireSignIn(note) {
   const proxied = !!(profile.proxy && (window.SMART_PROXY || {})[profileKey]);
   const openBase = q.get("base") || profile.openBase || (proxied ? new URL(profile.proxy, window.location.href).href : null);
   setupEhrBar();
+  setupSidebar();
 
   let note = "";
   if (q.has("error")) {
