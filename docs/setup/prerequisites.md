@@ -22,8 +22,11 @@
         iwr -useb https://pixi.sh/install.ps1 | iex
         ```
 
-- A **GitHub account** (to host your public JWK Set as a Gist)
-- An **Epic developer account** at [fhir.epic.com](https://fhir.epic.com)
+Depending on the backend you want to use:
+
+- **Cerner (Oracle Health) open sandbox:** nothing else. No account needed. See [Cerner Sandbox](cerner-sandbox.md).
+- **Cerner signed-in SMART mode (optional):** a free CernerCare account for code Console. See [Cerner Account & Registration](cerner-account.md).
+- **Epic:** an **Epic developer account** at [fhir.epic.com](https://fhir.epic.com) and a **GitHub account** (to host your public JWK Set at a `raw.githubusercontent.com` URL; see [Keys](keys.md)).
 
 ## Installation
 

@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>SMART Launch</title>
+  <script src="https://cdn.jsdelivr.net/npm/fhirclient@2.5.2/build/fhir-client.js"></script>
+  <script src="config.js"></script>
+  <script src="config.local.js" onerror="void 0"></script>
+</head>
+<body>
+  <p id="msg">Redirecting to the authorization server…</p>
+  <script>
+    // Handles both flows:
+    //   EHR launch   : the EHR opens  launch.html?iss=<fhir base>&launch=<token>
+    //   Standalone   : open           launch.html?iss=<fhir base>   (user picks the patient at login)
+    const params = new URLSearchParams(window.location.search);
+    const cfg = window.SMART_CONFIG;
+    const clientId = params.get("client_id") || cfg.clientId;
+    const ehrLaunch = params.has("launch");
+
+    const iss = params.get("iss") || (cfg.appType === "patient" ? cfg.patientIss : null);
+
+    if (!clientId) {
+      document.getElementById("msg").textContent =
+        "No client id. Run `pixi run smart-setup` (or pass ?client_id=...).";
+    } else if (!iss) {
+      document.getElementById("msg").textContent =
+        "This is a Provider app, which can't be launched by opening this page directly. " +
+        "In code Console choose Begin Testing, pick a patient and click Launch " +
+        "(or set appType to \"patient\" in config.js for a Patient app).";
+    } else {
+      // Oracle Health requires every scope to be listed explicitly (no wildcards), and they must
+      // match what the app registered in code Console. Provider apps (EHR launch) are registered
+      // with user/* scopes; Patient apps (standalone) with patient/* scopes.
+      // Override with ?scope_prefix=patient or ?scope_prefix=user.
+      const prefix = params.get("scope_prefix") || (ehrLaunch ? "user" : "patient");
+      const scope = [
+        ehrLaunch ? "launch" : "launch/patient",
+        "openid", "fhirUser", "online_access",
+        ...cfg.smartResources.map(r => `${prefix}/${r}.read`),
+      ].join(" ");
+
+      FHIR.oauth2.authorize({
+        clientId,
+        scope,
+        redirectUri: cfg.redirectUri,
+        iss,   // fhirclient discovers endpoints via .well-known/smart-configuration
+      }).catch(e => { document.getElementById("msg").textContent = "Launch failed: " + e.message; });
+    }
+  </script>
+</body>
+</html>

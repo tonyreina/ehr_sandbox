@@ -11,10 +11,10 @@ The active EHR backend is selected by `EHR_TYPE` in `.env`. Use `list-ehrs` to c
 Fetch and display demographics for a sandbox test patient.
 
 ```bash
-pixi run patient [camila|derrick|theodore|linda]
+pixi run patient [name]
 ```
 
-Default: `camila`.
+`name` is a test-patient key for the active EHR (see `list-patients`) or a raw FHIR id. Default: `camila` (Epic), `nancy` (Cerner).
 
 **Example:**
 
@@ -34,7 +34,7 @@ ID:      eq081-VQEgP8drUUqCWzHfw3
 Fetch observations for a patient. Defaults to laboratory results.
 
 ```bash
-pixi run observations [name] [OPTIONS]
+pixi run observations [name] [OPTIONS]   # default: theodore (Epic), joe (Cerner)
 ```
 
 | Option | Default | Description |
@@ -54,7 +54,7 @@ pixi run observations linda --count 5
 
 ## list-patients
 
-Print a table of known Epic sandbox test patients.
+Print a table of known test patients for the active `EHR_TYPE`.
 
 ```bash
 pixi run list-patients
@@ -86,6 +86,31 @@ pixi run list-ehrs
 ```
 
 Change the active backend by setting `EHR_TYPE` in `.env`. See [EHR Clients](ehr-clients.md) for details.
+
+---
+
+## smart-app
+
+Serve the patient dashboard at `http://localhost:8765/index.html` and open it in your browser. Works with no setup against the Cerner open sandbox.
+
+```bash
+pixi run smart-app
+python cli.py smart-app --no-open      # don't open a browser
+python cli.py smart-app --console      # also open code Console (signed-in launch)
+```
+
+See [Demo 3](demos/smart-app.md).
+
+---
+
+## smart-setup
+
+Optional. Prints the exact values to enter when registering the app in code Console, then prompts for the client ID, saves it to `smart-app/config.local.js` (gitignored) and checks the sandbox is reachable. Registration itself is manual.
+
+```bash
+pixi run smart-setup
+python cli.py smart-setup --client-id <id> --no-open
+```
 
 ---
 

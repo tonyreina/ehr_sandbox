@@ -9,7 +9,8 @@ ehr/
 ├── base.py      BaseEHRClient   — abstract interface every client must satisfy
 ├── factory.py   ClientFactory   — registry + from_env() entrypoint
 ├── epic.py      EpicClient      — JWT client credentials (RS384), token caching
-├── cerner.py    CernerClient    — stub showing the extension pattern
+├── cerner.py    CernerClient    — Oracle Health open sandbox, no auth
+├── patients.py  test patients per EHR + default selection
 └── hapi.py      HapiFhirClient  — unauthenticated, for local dev
 ```
 
@@ -90,17 +91,17 @@ EHR_TYPE=hapi
 HAPI_FHIR_BASE=http://localhost:8080/fhir
 ```
 
-### cerner *(stub)*
+### cerner
 
-Structure is in place (`ehr/cerner.py`) — authentication is not yet implemented. The extension points are documented in the source file.
-
-Required `.env` keys when implemented:
+Unauthenticated client for the Oracle Health (Cerner) open sandbox. Works with no setup beyond:
 
 ```
 EHR_TYPE=cerner
-CERNER_CLIENT_ID=<client id>
-CERNER_TENANT_ID=<tenant id>
+# optional — defaults to the public sandbox tenant
+CERNER_FHIR_BASE=https://fhir-open.cerner.com/r4/ec2458f2-1e24-41c8-b71b-0e701af7583d
 ```
+
+See [Setup → Cerner Sandbox](setup/cerner-sandbox.md). Secured (authenticated) Cerner endpoints are not implemented.
 
 ## Adding a new backend
 

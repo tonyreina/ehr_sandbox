@@ -13,6 +13,8 @@ generate-keys-force = "python cli.py generate-keys --force"
 list-patients      = "python cli.py list-patients"
 list-ehrs          = "python cli.py list-ehrs"
 docs               = "zensical serve"
+smart-setup        = "python cli.py smart-setup"
+smart-app          = "python cli.py smart-app"
 
 [dependencies]
 python = ">=3.15.0,<3.16"

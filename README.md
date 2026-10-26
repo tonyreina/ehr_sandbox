@@ -1,80 +1,111 @@
-# Epic FHIR Sandbox
+# FHIR Sandbox
 
-Python demos for the Epic FHIR R4 sandbox using backend system (client credentials) authentication.
+Python demos and a browser dashboard for FHIR R4 sandboxes:
 
-Based on the blog post [FHIR Practical Interoperability](https://www.doctorswhocode.blog/blog/fhir-practical-interoperability/).
+- **Oracle Health (Cerner)** open sandbox: no account, no login.
+- **Epic** sandbox: backend system (client credentials) authentication.
+- **HAPI FHIR** (local Docker): no authentication.
 
-## Prerequisites
+Select the backend for the Python demos with `EHR_TYPE` in `.env` (`cerner`, `epic` or `hapi`).
 
-- [pixi](https://pixi.sh) package manager
-- An Epic sandbox app registered at [fhir.epic.com](https://fhir.epic.com) with:
-  - Application audience: **Backend Systems**
-  - Incoming APIs: `Patient.Read (Demographics R4)`, `Observation.Search (Outside Record)`
-  - Non-production JWK Set URL pointing to your hosted `keys/public_jwks.json`
-  - Status: **Saved & Ready for Sandbox**
+Based on the blog post [FHIR Practical Interoperability](https://www.doctorswhocode.blog/blog/fhir-practical-interoperability/). Full documentation: `pixi run docs`.
 
-## Setup
+## Quick start (no account needed)
 
-**1. Install dependencies**
+Requires [pixi](https://pixi.sh).
 
 ```bash
 pixi install
+pixi run smart-app        # patient dashboard: http://localhost:8765/index.html
 ```
 
-**2. Configure environment**
+The dashboard shows vitals trend charts, labs, medications, allergies, encounters and problems for sandbox patients, with a patient picker and name search. See [docs/demos/smart-app.md](docs/demos/smart-app.md).
 
-Copy `.env` and fill in your credentials:
+For the command-line demos against the same Cerner sandbox, set `EHR_TYPE=cerner` in `.env`, then:
 
 ```bash
+pixi run list-patients
+pixi run patient nancy
+pixi run observations joe
+pixi run observations nancy --category vital-signs --count 5
+```
+
+## Signed-in SMART on FHIR (optional, Cerner)
+
+The dashboard can also run as a real SMART app with a login. This needs a free CernerCare account and a one-time app registration in [code Console](https://code-console.cerner.com/):
+
+```bash
+pixi run smart-setup      # prints the values to enter in code Console, saves your client ID
+pixi run smart-app        # then: code Console -> your app -> Test Sandbox -> Launch
+```
+
+Step-by-step: [docs/setup/cerner-account.md](docs/setup/cerner-account.md). Registration is manual because Oracle provides no API for it.
+
+## Epic setup (optional)
+
+Needs an Epic sandbox app registered at [fhir.epic.com](https://fhir.epic.com) with:
+
+- Application audience: **Backend Systems**
+- Incoming APIs: `Patient.Read (Demographics R4)`, `Observation.Search (Outside Record)`
+- Non-production JWK Set URL pointing to your hosted `keys/public_jwks.json`
+- Status: **Saved & Ready for Sandbox**
+
+Then:
+
+```bash
+pixi run generate-keys    # creates keys/ (private key stays local and gitignored)
+```
+
+Create `.env`:
+
+```bash
+EHR_TYPE=epic
 EPIC_CLIENT_ID=your-non-production-client-id
 EPIC_FHIR_BASE=https://fhir.epic.com/interconnect-fhir-oauth/api/FHIR/R4
 EPIC_TOKEN_URL=https://fhir.epic.com/interconnect-fhir-oauth/oauth2/token
 ```
 
-**3. Generate RSA keys**
+Host `keys/public_jwks.json` at a **`raw.githubusercontent.com`** URL (a Gist URL caused `invalid_client` even with correct keys), paste it into the app's **Non-Production JWK Set URL**, and click **Save & Ready for Sandbox**. Details: [docs/setup/keys.md](docs/setup/keys.md) and [docs/setup/epic-portal.md](docs/setup/epic-portal.md).
+
+## Commands
 
 ```bash
-pixi run generate-keys
-```
-
-**4. Register the public key with Epic**
-
-Host `keys/public_jwks.json` at a public URL (e.g. a GitHub Gist raw URL) and paste it into the **Non-Production JWK Set URL** field of your Epic app, then click **Save & Ready for Sandbox**.
-
-## Running the demos
-
-```bash
-pixi run patient [camila|derrick|theodore|linda]
+pixi run smart-app                       # patient dashboard (Cerner open sandbox)
+pixi run smart-setup                     # optional: signed-in SMART session setup
+pixi run patient [name]                  # keys depend on EHR_TYPE
 pixi run observations [name] [--category vital-signs] [--count 10]
-pixi run list-patients
-pixi run generate-keys
+pixi run list-patients                   # test patients for the active EHR
+pixi run list-ehrs                       # registered backends
+pixi run generate-keys                   # Epic key pair
+pixi run docs                            # serve the documentation site
 ```
 
-## Known sandbox test patients
+## Test patients
 
-| Name | DOB | Gender | FHIR ID |
-|---|---|---|---|
-| Camila Lopez | 1987-09-12 | F | `erXuFYUfucBZaryVksYEcMg3` |
-| Derrick Lin | 1973-06-03 | M | `eq081-VQEgP8drUUqCWzHfw3` |
-| Theodore Mychart | 1948-07-07 | M | `e63wRTbPfr1p8UW81d8Seiw3` |
-| Linda Ross | 1969-04-27 | F | `eIXesllypH3M9tAA5WdJftQ3` |
+| EHR | Keys |
+|---|---|
+| Cerner | `nancy` (12724066), `joe` (12724067), `wilm` (12724065), `tim` (12742400) |
+| Epic | `camila`, `derrick`, `theodore`, `linda` |
+
+Any other FHIR ID can be passed directly, e.g. `pixi run patient 12724065`. Run `pixi run list-patients` for the full table.
 
 ## Project structure
 
 ```
 epic_sandbox/
-├── keys/
-│   ├── generate_keys.py     # key generation script (run via pixi)
-│   ├── private_key.pem      # gitignored — keep secret
-│   ├── public_key.pem       # gitignored
-│   ├── public_jwks.json     # host this at a public URL for Epic
-│   └── public_jwk.json      # single JWK (reference)
+├── ehr/                     # multi-EHR client package
+│   ├── base.py              # BaseEHRClient interface
+│   ├── factory.py           # ClientFactory (selects by EHR_TYPE)
+│   ├── epic.py              # Epic: JWT client credentials (RS384)
+│   ├── cerner.py            # Cerner: open sandbox, no auth
+│   ├── hapi.py              # HAPI: local, no auth
+│   └── patients.py          # test patients per EHR
+├── demos/                   # demo_01_patient.py, demo_02_observations.py
+├── smart-app/               # browser patient dashboard (open + signed-in SMART)
+├── keys/                    # Epic key generation (private key gitignored)
 ├── docs/                    # Zensical documentation source
-├── demo_01_patient.py       # fetch patient demographics
-├── demo_02_observations.py  # fetch lab results
 ├── cli.py                   # Typer CLI (all pixi tasks point here)
-├── epic_auth.py             # JWT client-credentials auth helper
-├── .env                     # gitignored — your client ID and URLs
-├── pixi.toml                # dependency management + task shortcuts
+├── .env                     # gitignored: backend choice and credentials
+├── pixi.toml                # dependencies and task shortcuts
 └── zensical.toml            # docs site config
 ```
