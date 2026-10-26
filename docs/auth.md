@@ -12,15 +12,21 @@ Epic backend system apps use the **OAuth 2.0 client credentials** flow with a si
 
 ## Flow
 
-```
-Your app                     Epic token endpoint
-   |                               |
-   |-- signed JWT (RS384) -------> |
-   |                               | (fetches JWKS URL, verifies signature)
-   |<-- access token (1 hour) ---- |
-   |                               |
-   |-- Bearer <token> -----------> Epic FHIR API
-   |<-- FHIR resource ------------ |
+```mermaid
+sequenceDiagram
+    autonumber
+    participant App as Your app (EpicClient)
+    participant Auth as Epic token endpoint
+    participant JWKS as Your JWKS URL (raw.githubusercontent.com)
+    participant FHIR as Epic FHIR API
+
+    App->>App: Sign JWT with private key (RS384)
+    App->>Auth: POST client_credentials + signed JWT
+    Auth->>JWKS: Fetch public keys
+    JWKS-->>Auth: JWKS (matched by kid)
+    Auth-->>App: Access token (1 hour)
+    App->>FHIR: GET /Patient/{id} with Bearer token
+    FHIR-->>App: FHIR resource
 ```
 
 ## JWT claims
@@ -39,6 +45,41 @@ The JWT header must include `"kid"` matching a key in your hosted JWKS.
 ## Token caching
 
 `EpicClient` caches the access token and only re-fetches it 60 seconds before expiry (tokens are valid for 1 hour). Calling `ClientFactory.from_env()` multiple times within a request does not trigger redundant token requests.
+
+```mermaid
+flowchart TD
+    A[FHIR call requested] --> B{"Token cached and more than 60 s from expiry?"}
+    B -- yes --> D[Send request with cached token]
+    B -- no --> C[Sign JWT and request a new token]
+    C --> E[Cache token and expiry]
+    E --> D
+```
+
+## Cerner SMART on FHIR (dashboard)
+
+The browser dashboard's signed-in mode uses the **authorization code** flow with a user login, not client credentials. `fhirclient` discovers the endpoints from `.well-known/smart-configuration`, so none are hard-coded. Setup is in [Cerner Account & Registration](setup/cerner-account.md).
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User
+    participant Console as code Console
+    participant App as smart-app (browser)
+    participant Auth as Cerner authorization server
+    participant FHIR as Cerner FHIR API (fhir-ehr-code)
+
+    User->>Console: Test Sandbox, pick patient, Launch
+    Console->>App: launch.html?iss=...&launch=...
+    App->>FHIR: GET .well-known/smart-configuration
+    FHIR-->>App: authorize and token endpoints
+    App->>Auth: Redirect with client_id, scope, aud, state
+    Auth->>User: Sign in with test credentials
+    Auth->>App: Redirect to index.html?code=...&state=...
+    App->>Auth: POST code for token
+    Auth-->>App: Access token (about 10 minutes)
+    App->>FHIR: GET Patient and Observation with Bearer token
+    FHIR-->>App: FHIR resources
+```
 
 ## Using the client
 

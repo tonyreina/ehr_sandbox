@@ -16,6 +16,20 @@ pixi run smart-app     # http://localhost:8765/index.html — opens in your brow
 
 That's it: no account, keys or registration. Use the **Patient** dropdown, or search by name (for example `smart`), to switch patients.
 
+## How it picks a mode
+
+```mermaid
+flowchart LR
+    S[Open index.html] --> C{"Valid SMART session?"}
+    C -- "yes" --> SG["Signed-in mode: secured sandbox, Bearer token"]
+    C -- "no, or sign-in failed" --> O["Open mode: Cerner open sandbox, no login"]
+    O -. "if sign-in failed" .-> N["Notice explains why"]
+    SG --> D[Load patient and render dashboard]
+    O --> D
+```
+
+A session counts as valid when the URL carries the authorization `code` (or a SMART session is saved) and `FHIR.oauth2.ready()` succeeds. An `?error=` redirect or a failed exchange falls back to open mode with a notice.
+
 ## What it shows
 
 - **Latest vitals** tiles and **trend charts** (blood pressure with systolic and diastolic, pulse, temperature, oxygen saturation, respiratory rate, weight). Hover or use the arrow keys for a crosshair tooltip; every chart has a *Table view*. Far-future sandbox timestamps are hidden and counted.
@@ -48,6 +62,8 @@ Open mode never needs this. To exercise a real SMART launch:
 pixi run smart-setup   # prints the exact values to enter in code Console, saves your client ID
 pixi run smart-app
 ```
+
+The launch sequence is diagrammed in [Authentication](../auth.md#cerner-smart-on-fhir-dashboard).
 
 Registering the app is the one manual step: Oracle provides no API for it and it needs your CernerCare login. Then in [code Console](https://code-console.cerner.com/): your app → **Test Sandbox** → pick a patient → **Launch**. Cerner opens `launch.html?iss=…&launch=…`, you log in, and the dashboard header changes to *Signed in via SMART on FHIR*.
 

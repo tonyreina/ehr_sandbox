@@ -6,6 +6,22 @@ The project is built around a multi-EHR abstraction layer — swap `EHR_TYPE` in
 
 Based on [FHIR Practical Interoperability](https://www.doctorswhocode.blog/blog/fhir-practical-interoperability/).
 
+## How it fits together
+
+```mermaid
+flowchart LR
+    CLI["pixi run patient / observations"] --> F[ClientFactory]
+    Demos[demos/*.py] --> F
+    F -->|EHR_TYPE=epic| EP[EpicClient]
+    F -->|EHR_TYPE=cerner| CE[CernerClient]
+    F -->|EHR_TYPE=hapi| HA[HapiFhirClient]
+    EP -->|"JWT client credentials"| EPIC[(Epic sandbox)]
+    CE -->|"no auth"| CERN[(Cerner open sandbox)]
+    HA -->|"no auth"| HAPI[(Local HAPI server)]
+    DASH["pixi run smart-app (browser dashboard)"] -->|"open mode, no login"| CERN
+    DASH -.->|"optional signed-in SMART"| CERNS[(Cerner secured sandbox)]
+```
+
 ## Supported EHR backends
 
 | `EHR_TYPE` | Status | Auth |

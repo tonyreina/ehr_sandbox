@@ -2,6 +2,15 @@
 
 You only need this for the **signed-in SMART on FHIR mode** of the [patient dashboard](../demos/smart-app.md). The Python demos (`EHR_TYPE=cerner`) and the dashboard's default mode use the [open sandbox](cerner-sandbox.md), which needs no account.
 
+```mermaid
+flowchart LR
+    A["1. Sign in to code Console (CernerCare account)"] --> B["2. Register a Provider, R4 app"]
+    B --> C["3. Copy Client ID, run smart-setup"]
+    C --> D["4. pixi run smart-app"]
+    D --> E["code Console: Test Sandbox, pick patient, Launch"]
+    E --> F["Signed-in dashboard"]
+```
+
 ## 1. Get an account
 
 Registration happens in **code Console**, Oracle Health's developer portal:
