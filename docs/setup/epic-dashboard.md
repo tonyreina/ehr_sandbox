@@ -37,7 +37,7 @@ pixi run smart-app --ehr epic
 
 The startup line says `Epic: via local proxy using your backend app` when the configuration is found. You can also pick **Epic** from the EHR dropdown at any time.
 
-- **Patients:** the picker lists the Epic test patients (Camila Lopez, Derrick Lin, Theodore Mychart, Linda Ross, Warren McGinnis, Desiree Powell, Elijah Davis, Jason Argonaut).
+- **Patients:** the picker lists the Epic test patients (Camila Lopez, Derrick Lin, Theodore Mychart, Linda Ross, Warren McGinnis, Desiree Powell, Elijah Davis, Olivia Roberts).
 - **Search:** Epic only finds patients by **name together with a birth date** (for example `lin` and `1973-06-03`), so the search box has a date field for Epic.
 - **Sections:** your backend app has the Patient and Observation APIs, so the summary, vitals and labs load. Medications, allergies, encounters and problems show *Not authorized* until you add their APIs to the backend app (MedicationRequest, AllergyIntolerance, Encounter and Condition search, R4) and they reach the sandbox, which can take up to about an hour.
 

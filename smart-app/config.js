@@ -52,7 +52,7 @@ window.SMART_CONFIG = {
         { id: "e0w0LEDCYtfckT6N.CkJKCw3", label: "Warren McGinnis" },
         { id: "eAB3mDIBBcyUKviyzrxsnAw3", label: "Desiree Powell" },
         { id: "egqBHVfQlt4Bw3XGXoxVxHg3", label: "Elijah Davis" },
-        { id: "eD.LxhDyX35TntF77l7etUA3", label: "Jason Argonaut" },
+        { id: "eh2xYHuzl9nkSFVvV3osUHg3", label: "Olivia Roberts" },
       ],
     },
 

@@ -78,6 +78,20 @@ def patient(
     typer.echo(f"ID:      {patient_id}")
 
 
+def _obs_value(o: dict) -> str:
+    """Printable value of an Observation: quantity, coded or text value, or its components (e.g. BP)."""
+    if q := o.get("valueQuantity"):
+        return f"{q.get('value')} {q.get('unit', '')}".strip()
+    if cc := o.get("valueCodeableConcept"):
+        return cc.get("text") or next((c["display"] for c in cc.get("coding", []) if c.get("display")), "")
+    for key in ("valueString", "valueInteger", "valueBoolean"):
+        if key in o:
+            return str(o[key])
+    parts = [f"{c.get('code', {}).get('text', '?')} {c['valueQuantity'].get('value')}"
+             for c in o.get("component", []) if c.get("valueQuantity")]
+    return ", ".join(parts)
+
+
 @app.command()
 def observations(
     name:     PatientArg = None,
@@ -96,20 +110,14 @@ def observations(
     typer.echo(f"{category.capitalize()} results for {label} ({patient_id}):\n")
     shown = 0
     for o in obs:
-        code = o.get("code", {}).get("text", "Unknown")
-        date = o.get("effectiveDateTime", "")[:10]
-        value = o.get("valueQuantity")
+        code  = o.get("code", {}).get("text", "Unknown")
+        date  = o.get("effectiveDateTime", "")[:10] or " " * 10
+        value = _obs_value(o)
         if value:
-            typer.echo(f"  {date}  {code}: {value.get('value')} {value.get('unit', '')}")
+            typer.echo(f"  {date}  {code}: {value}")
             shown += 1
-        elif o.get("component"):                                   # e.g. blood pressure
-            parts = [f"{c.get('code', {}).get('text', '?')} {c['valueQuantity'].get('value')}"
-                     for c in o["component"] if c.get("valueQuantity")]
-            if parts:
-                typer.echo(f"  {date}  {code}: {', '.join(parts)}")
-                shown += 1
     if not shown:
-        typer.echo(f"  No {category} results with a numeric value for this patient in the sandbox.")
+        typer.echo(f"  No {category} results with a value for this patient in the sandbox.")
 
 
 @app.command("generate-keys")
