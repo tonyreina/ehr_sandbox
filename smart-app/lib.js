@@ -25,8 +25,13 @@ function codeText(resource) {
   return c.text || (c.coding || [])[0]?.display || "Unknown";
 }
 
+// Some EHRs (Epic) report units as raw UCUM codes; show the familiar form.
+const UNIT_LABELS = { "mm[Hg]": "mmHg", "Cel": "°C", "degC": "°C", "[degF]": "°F", "[lb_av]": "lb", "[in_i]": "in" };
+
 function quantity(q) {
-  return q && typeof q.value === "number" ? { value: q.value, unit: q.unit || "" } : null;
+  if (!q || typeof q.value !== "number") return null;
+  const unit = q.unit || q.code || "";
+  return { value: q.value, unit: UNIT_LABELS[unit] || unit };
 }
 
 // Vital-sign charts. A series picks values out of an Observation by LOINC code, either from the

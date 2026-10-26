@@ -91,7 +91,7 @@ Change the active backend by setting `EHR_TYPE` in `.env`. See [EHR Clients](ehr
 
 ## smart-app
 
-Serve the patient dashboard at `http://localhost:8765/index.html` and open it in your browser. One UI for several EHRs: Cerner and HAPI work with no setup; Epic needs a registered app.
+Serve the patient dashboard at `http://localhost:8765/index.html` and open it in your browser. One UI for several EHRs, none needing a login: Cerner and HAPI are open, and Epic goes through a local read-only proxy that signs in with your Backend Systems app (`.env`, `keys/`).
 
 ```bash
 pixi run smart-app                    # EHR from EHR_TYPE (else Cerner)
@@ -106,12 +106,12 @@ python cli.py smart-app --console     # also open the EHR's developer portal
 
 ## smart-setup
 
-Optional for Cerner, required for Epic. Prints the exact values to enter when registering the app with the EHR, prompts for the client ID, saves it to `smart-app/config.local.js` (gitignored, one entry per EHR) and checks the sandbox is reachable. Registration itself is manual.
+Optional, Cerner only. Prints the exact values to enter when registering the app in code Console, prompts for the client ID, saves it to `smart-app/config.local.js` (gitignored) and checks the sandbox is reachable. Registration itself is manual. `--ehr epic` only reports whether your Epic backend app is configured; Epic needs no registration for the dashboard.
 
 ```bash
 pixi run smart-setup --ehr cerner
-pixi run smart-setup --ehr epic
-python cli.py smart-setup --ehr epic --client-id <id> --no-open
+python cli.py smart-setup --ehr cerner --client-id <id> --no-open
+pixi run smart-setup --ehr epic     # just checks the backend app config
 ```
 
 ---

@@ -112,7 +112,8 @@ async function bundle(client, query, { timeout = 0 } = {}) {
   const b = timeout
     ? await Promise.race([req, new Promise((_, rej) => setTimeout(() => rej(new Error(`timed out after ${timeout / 1000}s`)), timeout))])
     : await req;
-  return (b.entry || []).map(e => e.resource);
+  // Epic also returns OperationOutcome entries (search warnings) inside result bundles.
+  return (b.entry || []).map(e => e.resource).filter(r => r && r.resourceType !== "OperationOutcome");
 }
 
 // Fills a section independently so one slow or forbidden resource never blocks the page.
@@ -125,7 +126,9 @@ async function section(token, id, load, render) {
   } catch (e) {
     if (token !== current) return;
     box.replaceChildren(el("p", /40[13]|insufficient/i.test(e.message)
-      ? `Not authorized. Register this resource's scope with ${profile.name} and add it to profiles.${profileKey}.resources in smart-app/config.js.`
+      ? (profile.proxy
+        ? `Not authorized. Add this resource's read/search API to your ${profile.name} backend app.`
+        : `Not authorized. Register this resource's scope with ${profile.name} and add it to profiles.${profileKey}.resources in smart-app/config.js.`)
       : `Unavailable: ${e.message}`, "muted"));
   }
 }
@@ -205,16 +208,22 @@ async function setupPicker(client, launchPatient, browse) {
   }
   fillPicker(select, base, base[0] && base[0].id);
   $("search").hidden = $("search-btn").hidden = !browse;
+  $("search-dob").hidden = !browse || !profile.searchNeedsBirthDate;
 
   select.addEventListener("change", () => loadPatient(client, select.value));
   $("picker").addEventListener("submit", async e => {
     e.preventDefault();
-    const text = $("search").value.trim();
+    const text = $("search").value.trim(), dob = $("search-dob").value;
     if (!text) return;
+    if (profile.searchNeedsBirthDate && !dob) {
+      $("status").className = "error";
+      $("status").textContent = `${profile.name} only finds patients by name together with a birth date.`;
+      return;
+    }
     $("status").className = "muted";
     $("status").textContent = `Searching for “${text}”…`;
     try {
-      const found = await bundle(client, `Patient?name=${encodeURIComponent(text)}&_count=20`);
+      const found = await bundle(client, `Patient?name=${encodeURIComponent(text)}${dob ? `&birthdate=${dob}` : ""}&_count=20`);
       if (!found.length) { $("status").textContent = `No patients match “${text}”.`; return; }
       fillPicker(select, found.map(p => ({ id: p.id, label: `${patientName(p)}${p.birthDate ? ", " + p.birthDate : ""}` })));
       $("status").textContent = `${found.length} match${found.length > 1 ? "es" : ""}.`;
@@ -260,6 +269,8 @@ async function start(client, mode, note) {
   const where = client.state.serverUrl;
   $("mode").textContent = mode === "signed"
     ? `Signed in to ${profile.name} via SMART on FHIR · ${where}`
+    : mode === "proxy"
+    ? `${profile.name} · via local proxy using your backend app (read-only, no login) · ${where}`
     : `${profile.name} · open (read-only, no login) · ${where}${profile.signedInNote ? " · " + profile.signedInNote : ""}`;
   if (note) { $("notice").textContent = note; $("notice").hidden = false; }
   const scope = (client.state.tokenResponse || {}).scope;
@@ -272,9 +283,16 @@ async function start(client, mode, note) {
 // An EHR without an open endpoint (Epic): start the login ourselves, once. A failed or cancelled
 // sign-in returns here with a notice, which stops the redirect loop.
 function requireSignIn(note) {
+  if (note) { $("notice").textContent = note; $("notice").hidden = false; }
+  if (profile.proxy) {                       // e.g. Epic: only reachable through the CLI's proxy
+    $("mode").textContent = `${profile.name} is not available here`;
+    $("status").textContent = window.SMART_PROXY
+      ? `pixi run smart-app is running, but ${profile.name} isn't configured. ${profile.launchHint || ""}`
+      : `Open this page through pixi run smart-app. ${profile.launchHint || ""}`;
+    return;
+  }
   $("mode").textContent = `${profile.name} requires sign-in`;
   const clientId = clientIdFor(profileKey, cfg, window.SMART_LOCAL);
-  if (note) { $("notice").textContent = note; $("notice").hidden = false; }
   if (!clientId) {
     $("status").textContent = `No ${profile.name} client id yet. Run: pixi run smart-setup --ehr ${profileKey}. ${profile.launchHint || ""}`;
     return;
@@ -295,7 +313,9 @@ function requireSignIn(note) {
   const returning = q.has("code") || q.has("error") || !!store.get("SMART_KEY");
   profileKey = chooseProfile(cfg, { ehrParam: q.get("ehr"), saved: returning ? store.get("smart_ehr") : null, def: window.SMART_DEFAULT_EHR });
   profile = cfg.profiles[profileKey];
-  const openBase = q.get("base") || profile.openBase;    // ?base= points an open profile at another server
+  // ?base= points an open profile at another server; a proxied profile (Epic) needs the CLI's proxy.
+  const proxied = !!(profile.proxy && (window.SMART_PROXY || {})[profileKey]);
+  const openBase = q.get("base") || profile.openBase || (proxied ? new URL(profile.proxy, window.location.href).href : null);
   setupEhrBar();
 
   let note = "";
@@ -315,6 +335,6 @@ function requireSignIn(note) {
       note = `SMART session unavailable (${e.message}).` + (openBase ? " Showing the open sandbox instead." : "");
     }
   }
-  if (openBase) return start(FHIR.client({ serverUrl: openBase }), "open", note);
+  if (openBase) return start(FHIR.client({ serverUrl: openBase }), proxied ? "proxy" : "open", note);
   requireSignIn(note);
 })();

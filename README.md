@@ -32,15 +32,15 @@ pixi run observations nancy --category vital-signs --count 5
 
 ## Patient dashboard: one UI, several EHRs
 
-`smart-app/` is a browser dashboard (vitals charts, labs, medications, allergies, encounters, problems) with an EHR dropdown. Cerner and HAPI need no account or login; Epic requires a one-time app registration, after which the dashboard starts the sign-in itself. See [docs/demos/smart-app.md](docs/demos/smart-app.md).
+`smart-app/` is a browser dashboard (vitals charts, labs, medications, allergies, encounters, problems) with an EHR dropdown. None of them needs a login: Cerner and HAPI are open, and Epic goes through a local proxy that uses your existing Backend Systems app (`.env`, `keys/`). See [docs/demos/smart-app.md](docs/demos/smart-app.md).
 
 ```bash
 pixi run smart-app                 # Cerner open sandbox, no login (default)
 pixi run smart-app --ehr hapi      # public HAPI server, no login
-pixi run smart-app --ehr epic      # needs: pixi run smart-setup --ehr epic
+pixi run smart-app --ehr epic      # via your Epic backend app (see Epic setup below)
 ```
 
-Optional signed-in SMART sessions: `pixi run smart-setup --ehr cerner` or `--ehr epic` prints the values to enter in the EHR's developer portal and saves the client ID. Step-by-step: [Cerner](docs/setup/cerner-account.md), [Epic](docs/setup/epic-smart-app.md). Registration is manual because neither EHR provides an API for it.
+Optional signed-in Cerner SMART session: `pixi run smart-setup --ehr cerner` prints the values to enter in code Console and saves the client ID ([step-by-step](docs/setup/cerner-account.md)); registration is manual because Oracle provides no API for it. Epic in the dashboard: [docs/setup/epic-dashboard.md](docs/setup/epic-dashboard.md).
 
 ## Epic setup (optional)
 
@@ -72,7 +72,7 @@ Host `keys/public_jwks.json` at a **`raw.githubusercontent.com`** URL (a Gist UR
 
 ```bash
 pixi run smart-app [--ehr cerner|epic|hapi]   # patient dashboard
-pixi run smart-setup --ehr cerner|epic        # register for a signed-in SMART session
+pixi run smart-setup --ehr cerner             # optional: signed-in Cerner SMART session
 pixi run patient [name]                  # keys depend on EHR_TYPE
 pixi run observations [name] [--category vital-signs] [--count 10]
 pixi run list-patients                   # test patients for the active EHR

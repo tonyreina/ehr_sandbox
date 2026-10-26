@@ -3,7 +3,8 @@
 This page covers **Epic** backend authentication. Other backends:
 
 - **Cerner open sandbox** (`EHR_TYPE=cerner`): no authentication.
-- **Dashboard sign-in (Cerner and Epic)**: OAuth 2.0 authorization code flow with a user login, handled by `fhirclient` in the browser. See [Browser sign-in](#browser-sign-in-smart-on-fhir).
+- **Dashboard, Cerner sign-in (optional)**: OAuth 2.0 authorization code flow with a user login, handled by `fhirclient` in the browser. See [Browser sign-in](#browser-sign-in-smart-on-fhir).
+- **Dashboard, Epic**: this backend flow, run server-side by `pixi run smart-app`. See [Epic in the Dashboard](setup/epic-dashboard.md).
 - **HAPI** (`EHR_TYPE=hapi`): no authentication.
 
 ---
@@ -57,7 +58,7 @@ flowchart TD
 
 ## Browser sign-in (SMART on FHIR)
 
-The browser dashboard's signed-in mode uses the **authorization code** flow with a user login, not client credentials (a browser can't hold the backend private key). `fhirclient` discovers the endpoints from `.well-known/smart-configuration`, so none are hard-coded. Setup: [Cerner Account & Registration](setup/cerner-account.md), [Epic SMART App Registration](setup/epic-smart-app.md).
+The browser dashboard's signed-in mode uses the **authorization code** flow with a user login, not client credentials (a browser can't hold the backend private key). `fhirclient` discovers the endpoints from `.well-known/smart-configuration`, so none are hard-coded. Setup: [Cerner Account & Registration](setup/cerner-account.md).
 
 **EHR launch (Cerner Provider app):** the EHR starts the app.
 
@@ -83,27 +84,7 @@ sequenceDiagram
     FHIR-->>App: FHIR resources
 ```
 
-**Standalone launch (Epic):** the dashboard starts the login itself, once, using the `launch/patient` scope.
-
-```mermaid
-sequenceDiagram
-    autonumber
-    actor User
-    participant App as Dashboard (browser)
-    participant Auth as Epic authorization server
-    participant FHIR as Epic FHIR API
-
-    User->>App: pixi run smart-app --ehr epic
-    App->>FHIR: GET .well-known/smart-configuration
-    FHIR-->>App: authorize and token endpoints
-    App->>Auth: Redirect with client_id, launch/patient scope, aud, state, PKCE challenge
-    Auth->>User: Sign in as a sandbox test patient
-    Auth->>App: Redirect to index.html?code=...&state=...
-    App->>Auth: POST code and PKCE verifier for token
-    Auth-->>App: Access token and the patient id
-    App->>FHIR: GET Patient and Observation with Bearer token
-    FHIR-->>App: FHIR resources
-```
+**Epic in the dashboard** does not sign in from the browser at all: `pixi run smart-app` uses the backend flow above server-side and proxies read requests. See [Epic in the Dashboard](setup/epic-dashboard.md).
 
 ## Using the client
 

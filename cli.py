@@ -118,7 +118,8 @@ def list_ehrs():
         typer.echo(f"  {name}{marker}")
 
 
-SMART_EHRS = ("cerner", "epic")      # profiles that have a sign-in (hapi has none)
+SMART_EHRS = ("cerner",)            # EHRs with a browser SMART sign-in to register
+DASHBOARD_EHRS = ("cerner", "epic", "hapi")
 
 # What to enter when registering the app with each EHR.
 SMART_REGISTRATION = {
@@ -140,20 +141,20 @@ SMART_REGISTRATION = {
         ],
         "id_name": "Client ID",
     },
-    "epic": {
-        "console": "https://fhir.epic.com/Developer/Apps",
-        "steps": "At fhir.epic.com (Build Apps -> Create) register a patient-facing app (names may vary):",
-        "rows": [
-            ("Application Audience",  "Patients"),
-            ("SMART on FHIR Version", "R4"),
-            ("Confidential client",   "No (public client, PKCE)"),
-            ("Redirect URI",          f"{SMART_BASE}/index.html"),
-            ("Incoming APIs",         "Patient.Read (Demographics) R4,"),
-            ("",                      "Observation.Read and Observation.Search (Labs, Vitals) R4"),
-        ],
-        "id_name": "Non-Production Client ID",
-    },
 }
+
+EPIC_NOTE = (
+    "Epic needs no extra registration for the dashboard: `pixi run smart-app` signs in with your\n"
+    "existing Backend Systems app (EPIC_* in .env and keys/private_key.pem) and passes the\n"
+    "dashboard's read requests through on localhost. Set that up as in docs/setup/epic-portal.md."
+)
+
+
+def _epic_backend_ready() -> bool:
+    """True when .env and keys/ have what EpicClient needs."""
+    load_dotenv(override=True)
+    return (all(os.getenv(k) for k in ("EPIC_CLIENT_ID", "EPIC_FHIR_BASE", "EPIC_TOKEN_URL"))
+            and (KEYS_DIR / "private_key.pem").exists() and (KEYS_DIR / "public_jwks.json").exists())
 
 
 def _read_smart_local() -> dict:
@@ -184,26 +185,30 @@ def _write_smart_local(data: dict) -> None:
 
 def _default_smart_ehr() -> str:
     env = _ehr_type()
-    return env if env in (*SMART_EHRS, "hapi") else "cerner"
+    return env if env in DASHBOARD_EHRS else "cerner"
 
 
 @app.command("smart-setup")
 def smart_setup(
-    ehr: Annotated[Optional[str], typer.Option("--ehr", help="cerner or epic (default: EHR_TYPE)")] = None,
+    ehr: Annotated[Optional[str], typer.Option("--ehr", help="cerner (epic needs no registration)")] = None,
     client_id: Annotated[Optional[str], typer.Option("--client-id", help="Client ID from the EHR's developer portal")] = None,
     open_browser: Annotated[bool, typer.Option("--open/--no-open", help="Open the developer portal in your browser")] = True,
 ):
-    """OPTIONAL: set up a signed-in SMART session (Cerner works without it; Epic needs it).
+    """OPTIONAL: set up a signed-in Cerner SMART session (the dashboard works without it).
 
-    Registration itself is manual (no EHR offers an API for it and it needs your
-    login there); this prints the exact values to enter, then saves the client ID
-    you get back. Run it once per EHR.
+    Registration itself is manual (Oracle offers no API for it and it needs your
+    CernerCare login); this prints the exact values to enter, then saves the
+    client ID you get back. Epic needs no registration here (see EPIC_NOTE).
     """
     import re
     import webbrowser
     import requests
 
-    ehr = (ehr or _default_smart_ehr()).lower()
+    ehr = (ehr or "cerner").lower()
+    if ehr == "epic":
+        typer.echo(EPIC_NOTE)
+        typer.echo("Backend app configured: " + ("yes" if _epic_backend_ready() else "no"))
+        return
     if ehr not in SMART_REGISTRATION:
         raise typer.BadParameter(f"--ehr must be one of: {', '.join(SMART_EHRS)}")
     reg = SMART_REGISTRATION[ehr]
@@ -226,10 +231,7 @@ def smart_setup(
     _write_smart_local(data)
     typer.echo(f"Wrote {SMART_DIR / 'config.local.js'} (clients: {', '.join(data['clientIds'])})")
 
-    if ehr == "cerner":
-        url = f"https://fhir-ehr-code.cerner.com/r4/{CERNER_TENANT}/.well-known/smart-configuration"
-    else:
-        url = "https://fhir.epic.com/interconnect-fhir-oauth/api/FHIR/R4/.well-known/smart-configuration"
+    url = f"https://fhir-ehr-code.cerner.com/r4/{CERNER_TENANT}/.well-known/smart-configuration"
     try:
         requests.get(url, timeout=10).raise_for_status()
         typer.echo("Sandbox reachable.")
@@ -249,8 +251,8 @@ def smart_app(
 ):
     """Serve the patient dashboard on localhost.
 
-    Cerner and HAPI work immediately with no login. Epic needs a registered app
-    (`smart-setup --ehr epic`); the dashboard then starts the sign-in itself.
+    Cerner and HAPI work immediately with no login. Epic works through a local,
+    read-only proxy that signs in with your Backend Systems app (.env + keys/).
     The page also has an EHR dropdown, so --ehr only sets the starting point.
     """
     import functools
@@ -258,21 +260,57 @@ def smart_app(
     from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 
     ehr = (ehr or _default_smart_ehr()).lower()
-    if ehr not in (*SMART_EHRS, "hapi"):
-        raise typer.BadParameter("--ehr must be one of: cerner, epic, hapi")
+    if ehr not in DASHBOARD_EHRS:
+        raise typer.BadParameter(f"--ehr must be one of: {', '.join(DASHBOARD_EHRS)}")
+
+    import json
+    import threading
+
+    epic_ready = _epic_backend_ready()
+    epic_client = None
+    epic_lock = threading.Lock()
+
+    def epic():
+        nonlocal epic_client
+        with epic_lock:
+            if epic_client is None:
+                from ehr.epic import EpicClient
+                epic_client = EpicClient.from_env()
+            return epic_client
 
     class Handler(SimpleHTTPRequestHandler):
+        def _send(self, status: int, body: bytes, ctype: str) -> None:
+            self.send_response(status)
+            self.send_header("Content-Type", ctype)
+            self.send_header("Content-Length", str(len(body)))
+            self.send_header("Cache-Control", "no-store")
+            self.end_headers()
+            self.wfile.write(body)
+
+        def _outcome(self, status: int, message: str) -> None:
+            body = {"resourceType": "OperationOutcome",
+                    "issue": [{"severity": "error", "code": "exception", "diagnostics": message}]}
+            self._send(status, json.dumps(body).encode(), "application/fhir+json")
+
         def do_GET(self):
-            # Tells the page which EHR profile to start with (static servers just 404 this file).
-            if self.path.split("?")[0] == "/__ehr.js":
-                body = f'window.SMART_DEFAULT_EHR = "{ehr}";\n'.encode()
-                self.send_response(200)
-                self.send_header("Content-Type", "text/javascript")
-                self.send_header("Content-Length", str(len(body)))
-                self.send_header("Cache-Control", "no-store")
-                self.end_headers()
-                self.wfile.write(body)
-                return
+            path = self.path.split("?")[0]
+            # Tells the page which EHR to start with and which proxies exist (static servers 404 this).
+            if path == "/__ehr.js":
+                js = (f'window.SMART_DEFAULT_EHR = "{ehr}";\n'
+                      f"window.SMART_PROXY = {json.dumps({'epic': epic_ready})};\n")
+                return self._send(200, js.encode(), "text/javascript")
+            # Read-only pass-through to Epic, authenticated server-side with the backend app.
+            # The private key and the token never reach the browser.
+            if self.path.startswith("/proxy/epic/"):
+                if not epic_ready:
+                    return self._outcome(503, "Epic backend app not configured (EPIC_* in .env, keys/).")
+                try:
+                    r = epic().get_raw(self.path[len("/proxy/epic/"):])
+                except ValueError as e:
+                    return self._outcome(400, str(e))
+                except Exception as e:      # token or network failure
+                    return self._outcome(502, f"Epic request failed: {e}")
+                return self._send(r.status_code, r.content, r.headers.get("Content-Type", "application/fhir+json"))
             super().do_GET()
 
     try:
@@ -283,9 +321,9 @@ def smart_app(
 
     typer.echo(f"Dashboard: {SMART_BASE}/index.html  (EHR: {ehr}; Ctrl-C to stop)")
     have = _read_smart_local()["clientIds"]
-    if ehr == "epic" and "epic" not in have:
-        typer.echo("Epic needs a registered app: run `pixi run smart-setup --ehr epic`", err=True)
-    elif ehr == "cerner":
+    typer.echo("Epic: " + ("via local proxy using your backend app" if epic_ready
+               else "not configured (set EPIC_* in .env and run generate-keys; see docs/setup/epic-portal.md)"))
+    if ehr == "cerner":
         typer.echo("Signed-in SMART mode: " + ("code Console -> your app -> Test Sandbox -> Launch"
                    if "cerner" in have else "optional; run `pixi run smart-setup` to enable it"))
     if open_browser:

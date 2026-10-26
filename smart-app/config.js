@@ -36,13 +36,13 @@ window.SMART_CONFIG = {
     epic: {
       name: "Epic",
       issMatch: "epic.com",
-      openBase: null,                       // Epic has no unauthenticated access: sign-in is required
-      signIn: true,
-      standaloneIss: "https://fhir.epic.com/interconnect-fhir-oauth/api/FHIR/R4",
-      launchHint: "Register a patient-facing app at fhir.epic.com (see docs), then run `pixi run smart-setup --ehr epic`.",
-      ehrScopePrefix: "user", standaloneScopePrefix: "patient",
-      extraScopes: ["openid", "fhirUser"],
-      resources: ["Patient", "Observation"],
+      // Epic has no open endpoint. `pixi run smart-app` serves a read-only proxy that signs in with
+      // your Backend Systems app (.env + keys/), so the browser needs no login and holds no secret.
+      openBase: null,
+      proxy: "proxy/epic",
+      standaloneIss: null,
+      searchNeedsBirthDate: true,           // Epic's Patient search needs name + birthdate
+      launchHint: "Epic is reached through `pixi run smart-app`, which signs in with your backend app (EPIC_* in .env and keys/).",
       conditionCategory: "problem-list-item",
       patients: [
         { id: "erXuFYUfucBZaryVksYEcMg3", label: "Camila Lopez" },

@@ -21,7 +21,7 @@ flowchart LR
     DASH["pixi run smart-app (browser dashboard)"] -->|"no login"| CERN
     DASH -->|"no login"| HAPI
     DASH -.->|"optional SMART sign-in"| CERNS[(Cerner secured sandbox)]
-    DASH -->|"SMART sign-in (automatic)"| EPICS[("Epic sandbox (SMART)")]
+    DASH -->|"local proxy, backend JWT"| EPIC
 ```
 
 ## Supported EHR backends
@@ -41,7 +41,7 @@ pixi run list-patients
 pixi run list-ehrs
 pixi run generate-keys
 pixi run smart-app        # patient dashboard on localhost: --ehr cerner | epic | hapi
-pixi run smart-setup      # register for a signed-in SMART session: --ehr cerner | epic
+pixi run smart-setup      # optional: register a signed-in Cerner SMART session
 ```
 
 See [Setup → Prerequisites](setup/prerequisites.md) to get started, or [EHR Clients](ehr-clients.md) for the architecture.
