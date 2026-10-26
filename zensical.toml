@@ -1,6 +1,6 @@
 [project]
-site_name = "Epic FHIR Sandbox"
-site_description = "Python demos for the Epic FHIR R4 sandbox using backend system authentication."
+site_name = "FHIR Sandbox"
+site_description = "Python demos and a SMART on FHIR dashboard for the Epic and Oracle Health (Cerner) FHIR R4 sandboxes."
 site_author = "Tony Reina"
 docs_dir = "docs"
 site_dir = "site"
@@ -12,6 +12,8 @@ nav = [
     "setup/prerequisites.md",
     "setup/keys.md",
     "setup/epic-portal.md",
+    "setup/cerner-sandbox.md",
+    "setup/cerner-account.md",
   ] },
   { "Authentication" = "auth.md" },
   { "EHR Clients" = "ehr-clients.md" },
@@ -19,6 +21,7 @@ nav = [
   { "Demos" = [
     "demos/patient.md",
     "demos/observations.md",
+    "demos/smart-app.md",
   ] },
   { "Reference" = "reference.md" },
 ]

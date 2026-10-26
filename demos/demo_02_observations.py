@@ -3,19 +3,15 @@ import os
 import sys
 from dotenv import load_dotenv
 from ehr import ClientFactory
+from ehr.patients import resolve
 
 load_dotenv()
 
-PATIENTS = {
-    "camila":   "erXuFYUfucBZaryVksYEcMg3",
-    "derrick":  "eq081-VQEgP8drUUqCWzHfw3",
-    "theodore": "e63wRTbPfr1p8UW81d8Seiw3",
-    "linda":    "eIXesllypH3M9tAA5WdJftQ3",
-}
-
-patient_key = sys.argv[1] if len(sys.argv) > 1 else "theodore"
+ehr_type    = os.getenv("EHR_TYPE", "epic").lower()
 category    = sys.argv[2] if len(sys.argv) > 2 else "laboratory"
-patient_id  = PATIENTS.get(patient_key, patient_key)
+patient_key, patient_id = resolve(
+    ehr_type, sys.argv[1] if len(sys.argv) > 1 else None, observations=True
+)
 
 client = ClientFactory.from_env()
 obs    = client.get_observations(patient_id, category=category)

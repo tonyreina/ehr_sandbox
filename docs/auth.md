@@ -1,5 +1,13 @@
 # Authentication
 
+This page covers **Epic** backend authentication. Other backends:
+
+- **Cerner open sandbox** (`EHR_TYPE=cerner`): no authentication.
+- **Cerner SMART dashboard**: OAuth 2.0 authorization code flow with a user login, handled by `fhirclient` in the browser. See [Cerner Account & Registration](setup/cerner-account.md).
+- **HAPI** (`EHR_TYPE=hapi`): no authentication.
+
+---
+
 Epic backend system apps use the **OAuth 2.0 client credentials** flow with a signed JWT assertion. No user login is required. This is implemented in `ehr/epic.py` (`EpicClient`).
 
 ## Flow

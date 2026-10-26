@@ -1,14 +1,17 @@
-"""Cerner (Oracle Health) FHIR client — stub showing the extension pattern.
+"""Oracle Health (Cerner) FHIR client for the open sandbox.
 
-Cerner uses the same JWT client-credentials flow as Epic (RS384).
-To implement:
-  1. Set EHR_TYPE=cerner in .env
-  2. Add CERNER_CLIENT_ID, CERNER_TENANT_ID to .env
-  3. Register a JWKS URL in the Cerner developer portal
-  4. Fill in _fetch_token() below — the flow is nearly identical to EpicClient
+The open sandbox is read-only and needs no authentication, so this client
+works out of the box:
+
+  EHR_TYPE=cerner
+
+Optionally override the endpoint (defaults to the public sandbox tenant):
+
+  CERNER_FHIR_BASE=https://fhir-open.cerner.com/r4/<tenant-id>
+
+Secured (authenticated) Cerner endpoints are not implemented.
 """
 import os
-from pathlib import Path
 
 import requests
 from dotenv import load_dotenv
@@ -16,14 +19,18 @@ from dotenv import load_dotenv
 from ehr.base import BaseEHRClient
 from ehr.factory import ClientFactory
 
+# Public Oracle Health sandbox tenant
+_DEFAULT_BASE = "https://fhir-open.cerner.com/r4/ec2458f2-1e24-41c8-b71b-0e701af7583d"
+
 
 @ClientFactory.register("cerner")
 class CernerClient(BaseEHRClient):
+    """No-auth FHIR client for the Oracle Health open sandbox."""
 
-    def __init__(self, client_id: str, tenant_id: str, key_file: Path) -> None:
-        self._client_id = client_id
-        self._tenant_id = tenant_id
-        self._key_file  = key_file
+    def __init__(self, fhir_base_url: str = _DEFAULT_BASE) -> None:
+        self._fhir_base = fhir_base_url.rstrip("/")
+        self._session   = requests.Session()
+        self._session.headers["Accept"] = "application/fhir+json"
 
     @property
     def ehr_name(self) -> str:
@@ -31,24 +38,10 @@ class CernerClient(BaseEHRClient):
 
     @property
     def fhir_base(self) -> str:
-        return f"https://fhir-ehr.cerner.com/r4/{self._tenant_id}"
-
-    @property
-    def _token_url(self) -> str:
-        return (
-            f"https://authorization.cerner.com/tenants/{self._tenant_id}"
-            "/protocols/oauth2/profiles/smart-v1/token"
-        )
-
-    def _session_(self) -> requests.Session:
-        # TODO: implement JWT client-credentials fetch (same pattern as EpicClient)
-        raise NotImplementedError(
-            "CernerClient authentication not yet implemented. "
-            "See ehr/cerner.py for the extension points."
-        )
+        return self._fhir_base
 
     def get_patient(self, patient_id: str) -> dict:
-        r = self._session_().get(f"{self.fhir_base}/Patient/{patient_id}")
+        r = self._session.get(f"{self._fhir_base}/Patient/{patient_id}")
         r.raise_for_status()
         return r.json()
 
@@ -58,7 +51,7 @@ class CernerClient(BaseEHRClient):
         category: str = "laboratory",
         count: int = 20,
     ) -> list[dict]:
-        r = self._session_().get(f"{self.fhir_base}/Observation", params={
+        r = self._session.get(f"{self._fhir_base}/Observation", params={
             "patient":  patient_id,
             "category": category,
             "_sort":    "-date",
@@ -70,9 +63,4 @@ class CernerClient(BaseEHRClient):
     @classmethod
     def from_env(cls) -> "CernerClient":
         load_dotenv(override=True)
-        root = Path(__file__).parent.parent
-        return cls(
-            client_id = os.environ["CERNER_CLIENT_ID"],
-            tenant_id = os.environ["CERNER_TENANT_ID"],
-            key_file  = root / "keys" / "private_key.pem",
-        )
+        return cls(fhir_base_url=os.getenv("CERNER_FHIR_BASE", _DEFAULT_BASE))

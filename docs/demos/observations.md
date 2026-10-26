@@ -10,7 +10,7 @@ pixi run observations [name] [OPTIONS]
 
 | Option | Default | Description |
 |---|---|---|
-| name | `theodore` | Patient key (camila, derrick, theodore, linda) |
+| name | `theodore` (Epic) / `joe` (Cerner) | Patient key for the active EHR, or a raw FHIR id |
 | `--category` | `laboratory` | FHIR observation category |
 | `--count`, `-n` | `20` | Max results to return |
 
@@ -32,6 +32,17 @@ Laboratory results for theodore (e63wRTbPfr1p8UW81d8Seiw3):
   2012-10-19  Hemoglobin: 15.0 g/dL
   2012-10-19  Hematocrit: 45 %
   2007-07-25  Glucose, Ur: 110 mg/dL
+```
+
+### Cerner
+
+```
+$ EHR_TYPE=cerner pixi run observations nancy --category vital-signs --count 5
+EHR: Cerner
+Vital-signs results for nancy (12724066):
+
+  2026-10-23  Oxygen Saturation: 97.0 %
+  2026-10-23  Temperature Oral: 37.0 degC
 ```
 
 ## How it works

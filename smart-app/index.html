@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Patient Dashboard</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/fhirclient@2.5.2/build/fhir-client.js"></script>
+  <script src="config.js"></script>
+  <script src="lib.js"></script>
+  <script src="charts.js"></script>
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <header>
+    <h1>Patient dashboard</h1>
+    <p id="mode" class="muted"></p>
+    <p id="notice" class="error" role="alert" hidden></p>
+    <p id="status" class="muted" role="status"></p>
+  </header>
+
+  <form id="picker" class="filters" hidden>
+    <label for="patient-select">Patient</label>
+    <select id="patient-select"></select>
+    <input id="search" type="search" placeholder="Search by name (e.g. smart)" size="22" aria-label="Search patients by name">
+    <button type="submit">Search</button>
+  </form>
+
+  <main id="dash" hidden>
+    <section id="summary" class="card">
+      <h2 id="name"></h2>
+      <p id="demographics" class="muted"></p>
+    </section>
+
+    <section>
+      <h2>Latest vitals</h2>
+      <div id="tiles" class="tiles"></div>
+    </section>
+
+    <section>
+      <h2>Vital sign trends</h2>
+      <p id="future-note" class="muted" hidden></p>
+      <div id="charts" class="grid"></div>
+    </section>
+
+    <section>
+      <h2>Laboratory</h2>
+      <div id="labs"></div>
+    </section>
+
+    <section><h2>Medications</h2><div id="meds"></div></section>
+
+    <div class="grid two">
+      <section><h2>Allergies</h2><div id="allergies"></div></section>
+      <section><h2>Encounters</h2><div id="encounters"></div></section>
+    </div>
+
+    <section><h2>Problems</h2><div id="conditions"></div></section>
+  </main>
+</body>
+</html>
