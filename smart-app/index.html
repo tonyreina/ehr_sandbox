@@ -63,6 +63,7 @@
         <a href="#sec-allergies">Allergies</a>
         <a href="#sec-encounters">Encounters</a>
         <a href="#sec-problems">Problems</a>
+        <a href="#sec-ask">Ask AI</a>
       </nav>
 
       <main>
@@ -108,6 +109,19 @@
         <section class="panel" id="sec-problems">
           <h2 class="panel-head">Problem list</h2>
           <div class="panel-body" id="conditions"></div>
+        </section>
+
+        <section class="panel" id="sec-ask">
+          <h2 class="panel-head">Ask about this patient <span class="panel-sub">AI reads what is on this page</span></h2>
+          <div class="panel-body">
+            <p class="muted">Synthetic data only. Never type or paste real patient information. Check every answer against the chart.</p>
+            <div id="ask-examples" class="ask-examples"></div>
+            <textarea id="ask-q" rows="2" placeholder="Ask a question about this patient" aria-label="Question about this patient"></textarea>
+            <button id="ask-btn" type="button">Ask</button>
+            <p id="ask-status" class="muted" role="status"></p>
+            <pre id="ask-answer" class="ask-answer" hidden></pre>
+            <details><summary>What the AI sees</summary><pre id="ask-chart" class="ask-chart"></pre></details>
+          </div>
         </section>
       </main>
     </div>

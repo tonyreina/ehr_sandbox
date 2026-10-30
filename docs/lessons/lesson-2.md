@@ -1,0 +1,60 @@
+# Lesson 2: Ask questions in plain English
+
+**Idea:** an AI can read a chart and answer questions about it, but it can be confidently wrong. Your job is to ask well and check every answer.
+
+**You will finish with:** three tested prompts and one example of the AI getting something wrong.
+
+## Setup
+
+Finish [OpenAI Codex](../setup/codex.md) first (`pixi run codex-setup`, then fully restart VS Code). Then start the dashboard:
+
+```bash
+pixi run smart-app --ehr hapi
+```
+
+The terminal line **Ask box: ready** confirms your token was found. If it says it needs a token, redo the Codex setup.
+
+## How the Ask box works
+
+Scroll to **Ask about this patient** at the bottom of the chart (or click **Ask AI** on the left). When you press **Ask**:
+
+1. The page copies the text of the chart panels you can see.
+2. It sends that text and your question to the AI through the course proxy, together with standing instructions: answer only from the chart, say "Not documented in this chart" if unsure, and name the section each fact comes from.
+3. The answer appears below. Open **What the AI sees** to read exactly what it was given.
+
+The AI knows nothing about the patient except that text. If a fact is not on the page, it is not available to the AI.
+
+## Writing a good question
+
+A good question has four parts:
+
+| Part | Example |
+|---|---|
+| Role or purpose | "I am a nurse preparing for handoff." |
+| What to look at | "Using the labs and medications..." |
+| What you want | "...list anything that changed this year." |
+| The shape of the answer | "Answer in three bullet points." |
+
+## Exercises
+
+1. **Warm up.** Open Maria Alvarez. Click each example question in turn and read the answers. Check each against the panels.
+2. **Write three prompts.** Write three questions of your own about Maria using the four parts above. Compare the answers. Which wording gave the most useful one?
+3. **Ask about something missing.** Open Alex Rivera and ask: *List this patient's allergies and current medications.* What does the AI say? What should a safe answer say?
+4. **Ask something outside the chart.** On any patient, ask: *What is this patient's blood type?* A safe answer says it is not documented.
+5. **Check the AI against the chart.** Open Susan Whitfield and ask about her smoking status and allergies. Then read the Allergies panel, the Problem list and the **What the AI sees** box yourself. Does the answer match everything on the page? If the sources disagree, what should the AI do?
+6. **Catch a mistake.** Keep asking different questions until the AI says something the chart does not support, or leave out something that is there. Write down the question, the answer and what the chart actually says.
+
+## Discuss
+
+- Which exercise would have caused harm if you had trusted the answer without checking?
+- What did the standing instructions change? Try the same question in a general chatbot and compare.
+- Who should be responsible for a wrong AI answer used in care?
+
+## Tips and troubleshooting
+
+| Symptom | Fix |
+|---|---|
+| "No OPENAI_TOKEN found" | Run `pixi run codex-setup`, fully restart VS Code, and start `smart-app` again. |
+| "rejected your token" | Check the token, then run `pixi run codex-setup` again. |
+| The Ask button is greyed out | The token was not found when `smart-app` started. Same fix as above. |
+| The answer ignores a panel | Wait until the panels finish loading, then ask again. Check **What the AI sees**. |

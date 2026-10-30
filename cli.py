@@ -420,6 +420,7 @@ def smart_app(
     import json
     import threading
 
+    from ehr import ask as ask_mod
     from ehr import hapi_local
     hapi_started = False                # True when this run started the local HAPI container
     if ehr == "hapi" and not os.getenv("HAPI_FHIR_BASE") and not hapi_local.ready():
@@ -469,7 +470,8 @@ def smart_app(
             if path == "/__ehr.js":
                 js = (f'window.SMART_DEFAULT_EHR = "{ehr}";\n'
                       f"window.SMART_PROXY = {json.dumps({'epic': epic_ready})};\n"
-                      f"window.SMART_BASES = {json.dumps(bases)};\n")
+                      f"window.SMART_BASES = {json.dumps(bases)};\n"
+                      f"window.SMART_ASK = {json.dumps(bool(ask_mod.token()))};\n")
                 return self._send(200, js.encode(), "text/javascript")
             # Read-only pass-through to Epic, authenticated server-side with the backend app.
             # The private key and the token never reach the browser.
@@ -485,8 +487,28 @@ def smart_app(
                 return self._send(r.status_code, r.content, r.headers.get("Content-Type", "application/fhir+json"))
             super().do_GET()
 
+    class AskHandler(Handler):
+        """Adds POST /api/ask: the chart text and question go to the course proxy, the token stays here."""
+
+        def do_POST(self):
+            if self.path != "/api/ask":
+                return self._send(404, b"not found", "text/plain")
+            # A web page on another site must not be able to spend this learner's token: require a
+            # JSON request with a custom header (which browsers block cross-site) from our own origin.
+            if (self.headers.get("X-Ask") != "1" or self.headers.get("Content-Type", "").split(";")[0] != "application/json"
+                    or self.headers.get("Origin", SMART_BASE) != SMART_BASE):
+                return self._send(403, b'{"error": "forbidden"}', "application/json")
+            try:
+                data = json.loads(self.rfile.read(min(int(self.headers.get("Content-Length", 0)), 200_000)))
+                answer = ask_mod.ask(str(data.get("chart", "")), str(data.get("question", "")))
+                return self._send(200, json.dumps({"answer": answer}).encode(), "application/json")
+            except (ValueError, TypeError):
+                return self._send(400, b'{"error": "Bad request."}', "application/json")
+            except ask_mod.AskError as e:
+                return self._send(502, json.dumps({"error": str(e)}).encode(), "application/json")
+
     try:
-        server = ThreadingHTTPServer(("127.0.0.1", SMART_PORT), functools.partial(Handler, directory=str(SMART_DIR)))
+        server = ThreadingHTTPServer(("127.0.0.1", SMART_PORT), functools.partial(AskHandler, directory=str(SMART_DIR)))
     except OSError as e:
         typer.echo(f"Cannot listen on port {SMART_PORT}: {e}", err=True)
         raise typer.Exit(1)
@@ -498,6 +520,8 @@ def smart_app(
     if ehr == "cerner":
         typer.echo("Signed-in SMART mode: " + ("code Console -> your app -> Test Sandbox -> Launch"
                    if "cerner" in have else "optional; run `pixi run smart-setup` to enable it"))
+    typer.echo("Ask box: " + ("ready (uses your OPENAI_TOKEN)" if ask_mod.token()
+               else "needs a token; run `pixi run codex-setup` and restart VS Code"))
     if open_browser:
         webbrowser.open(f"{SMART_BASE}/index.html")
     if console and ehr in SMART_REGISTRATION:
