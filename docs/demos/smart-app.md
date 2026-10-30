@@ -1,127 +1,32 @@
-# Demo 3: Patient Dashboard
+# Dashboard
 
-A browser dashboard for FHIR R4 sandboxes: patient summary, latest vitals, trend charts, lab results with sparklines, medications, allergies, encounters and problems. **One UI, several EHRs**: pick the EHR from the dropdown at the top (or `--ehr` on the command line).
-
-| EHR | No-login mode | Signed-in mode | Setup |
-|---|---|---|---|
-| **Oracle Health (Cerner)** | yes: the open sandbox | optional (SMART, Provider app launched from code Console) | none for open mode |
-| **HAPI FHIR** | yes: your [local server with Synthea patients](../setup/local-hapi.md), else public `hapi.fhir.org` | n/a | none for the public server; Docker for the local one |
-| **Epic** | yes: through a local proxy that uses your backend app | n/a | your existing Backend Systems app (`.env`, `keys/`) |
-
-## Quick start
+A patient chart in your browser, with an **Ask AI** tab. Run it in the VS Code terminal:
 
 ```bash
-pixi install
-pixi run smart-app                # http://localhost:8765/index.html (Cerner, no login)
-pixi run smart-app --ehr hapi     # HAPI: starts your local server, stops it on Ctrl-C (else the public one)
-pixi run smart-app --ehr epic     # Epic: uses your backend app from .env and keys/
+pixi run smart-app --ehr hapi
 ```
 
-`--ehr` only sets the starting EHR (default: `EHR_TYPE` from `.env`, else Cerner); the page's EHR dropdown switches at any time. Use the **Patient** dropdown or the name search (for example `smart`) to switch patients.
+It starts your practice server if needed and opens the chart. Pick a patient from the **Patient** menu, or search by name. Press **Ctrl + C** in the terminal to stop it (patients are kept).
 
-## Screenshots
+![Dashboard on the local HAPI server](hapi_ehr_app.png)
 
-Oracle Health (Cerner) open sandbox, no login:
+## Chart tab
 
-![Dashboard on the Oracle Health (Cerner) open sandbox](oracle_ehr_app.png)
+- **Banner:** name, age, and allergy and problem chips.
+- **Vitals:** latest values and trend charts (hover for values; each chart has a table view), plus a day-by-day flowsheet.
+- **Results:** latest value of each lab, flagged H or L when abnormal, with a small history graph.
+- **Medications, allergies, encounters, problems:** the screen shows the first 10 rows of each. An empty list means nothing is recorded, not that the patient has none.
 
-Epic through the local proxy (Epic finds patients by name only together with a birth date):
+## Ask AI tab
 
-![Dashboard on the Epic sandbox via the local proxy](epic_ehr_app.png)
+1. Pick a patient, open **Ask AI**, and type a question or click an example.
+2. Press **Ask**. The answer appears with chips for the model, estimated cost and token counts.
+3. Open **What the AI sees** to read exactly what was sent: the system message (green) and the chart text with your question. The AI knows only that text.
 
-HAPI on your own machine, filled with Synthea patients ([Local HAPI Server](../setup/local-hapi.md)):
+The AI is told to answer only from the chart and to say "Not documented" when it is unsure. Check every answer yourself. Use synthetic patients only. Your token stays on your computer; the request also tells the proxy not to store your chart.
 
-![Dashboard on a local HAPI server with Synthea patients](hapi_ehr_app.png)
+If the tab says no token was found, run `pixi run codex-setup <your-token>` (see [Connect Codex](../setup/codex.md)), then press Ctrl + C and start the dashboard again.
 
-## What it shows
+## Other EHRs
 
-The page is laid out like a clinical chart: an app bar with the EHR and patient selectors, a **patient banner** (name, sex, age, DOB, ID, and allergy / problem chips), and an activity **sidebar** that tracks the section in view.
-
-- **Latest vitals** tiles and **trend charts** (blood pressure with systolic and diastolic, pulse, temperature, oxygen saturation, respiratory rate, weight). Hover or use the arrow keys for a crosshair tooltip; every chart has a *Table view*. Far-future sandbox timestamps are hidden and counted.
-- **Flowsheet:** vitals by day (newest first), the way nursing flowsheets show them.
-- **Results:** latest value per test with an **H / L / A flag** (the EHR's interpretation, else the reference range), the reference range and a sparkline of its history.
-- **Medications, allergies, encounters, problems.** Each section loads independently, so a slow or forbidden resource never blocks the page.
-
-The sandboxes are shared and their data is synthetic (for example implausible potassium values) and changes over time. Some Cerner searches are slow: labs take ~10 s and problems can take 30+ s, so those sections show *Loading…* and problems give up after 45 s.
-
-## How it picks an EHR and a mode
-
-```mermaid
-flowchart TD
-    S[Open index.html] --> P["Choose profile: ?ehr=, saved sign-in, --ehr / EHR_TYPE, default"]
-    P --> V{"Valid SMART session?"}
-    V -- "yes" --> SG["Signed-in mode: Bearer token"]
-    V -- "no" --> O{"Open endpoint, or local proxy available?"}
-    O -- "Cerner, HAPI" --> OM["Open mode, no login"]
-    O -- "Epic via smart-app" --> PX["Proxy mode: backend app, no login"]
-    O -- "neither" --> H["Explain what is missing"]
-    SG --> D[Load patient and render dashboard]
-    OM --> D
-    PX --> D
-```
-
-A profile can also start a SMART login itself (`standaloneIss`); it then redirects at most once per browser session, and a failed or cancelled login returns with a notice and a **Sign in** button instead of looping. None of the built-in profiles needs this today: a Cerner Provider app is launched by the EHR, and Epic uses the proxy.
-
-
-## Files
-
-```
-smart-app/
-├── index.html       the dashboard (also the SMART redirect target)
-├── app.js           profile/mode selection, loading, rendering, picker/search
-├── lib.js           pure helpers: FHIR transforms, profile choice, scopes (node-testable)
-├── charts.js        dependency-free SVG line charts and sparklines
-├── style.css        light/dark theme tokens
-├── config.js        EHR profiles (servers, scopes, test patients)
-├── config.local.js  your per-EHR client ids (generated by smart-setup, gitignored)
-├── launch.html      starts the SMART authorization (any profile)
-└── __ehr.js         served by `pixi run smart-app` only: starting EHR and available proxies
-```
-
-`fhirclient` 2.5.2 (jsDelivr) is used for requests in every mode and for the OAuth flow when signing in (PKCE is used when the server supports it). The Epic proxy lives in `cli.py` (`smart-app`) and uses `EpicClient.get_raw()` from `ehr/epic.py`.
-
-## Profiles
-
-Each EHR is a profile in `smart-app/config.js`:
-
-| Field | Meaning |
-|---|---|
-| `openBase` | no-login FHIR base URL, or `null` |
-| `proxy` | path of a local proxy served by `smart-app` (Epic) |
-| `standaloneIss` | where the app can start the login itself; `null` if the EHR must launch it |
-| `issMatch` | host fragment that identifies the EHR when it launches the app |
-| `resources` | resources requested at sign-in (each needs a registered scope) |
-| `patients` | test patients for the picker (empty: list the server's first patients) |
-| `conditionCategory` | category used for the Problems search |
-| `searchNeedsBirthDate` | the EHR only finds patients by name plus birth date (Epic) |
-
-Add an EHR by adding a profile; the rendering code is plain FHIR R4 and shared. A different server for an open profile can be tried with `?base=`, for example `index.html?ehr=hapi&base=http://localhost:8080/fhir` for a local [HAPI](https://hapifhir.io) Docker container.
-
-## Signing in (Cerner, optional)
-
-Only Cerner has a browser sign-in; Epic uses the proxy (see [Epic in the Dashboard](../setup/epic-dashboard.md)) and HAPI has no login.
-
-```bash
-pixi run smart-setup --ehr cerner
-```
-
-prints the exact values to enter in code Console, saves the client ID you get back in `smart-app/config.local.js` and checks the sandbox is reachable. Registering is manual because Oracle provides no API for it and it needs your login. Then launch from code Console: your app → **Test Sandbox** → pick a patient → **Launch**. Details: [Cerner Account & Registration](../setup/cerner-account.md); the login sequence is diagrammed in [Authentication](../auth.md#browser-sign-in-smart-on-fhir).
-
-### Scopes
-
-The app requests `Patient` and `Observation` by default (`resources` in the profile). To also load the other sections when signed in, register their scopes with the EHR **and** add the resource names to the profile; sections without a scope show *Not authorized*. Requesting a scope you didn't register can make the EHR reject the whole sign-in.
-
-- Provider/clinician launches use `user/…` scopes, which let the signed-in user read any patient they can access, so the picker and search work.
-- Patient (standalone) logins use `patient/…` scopes, which only cover the patient who logged in, so the picker shows that one patient and search is hidden.
-
-### Notes
-
-- A client is only accepted by the persona matching its app type. Opening `launch.html` directly with a Cerner **Provider** app fails with `client-persona-mismatch`; launch from code Console. For a standalone Cerner login register a *Patient* app and set the profile's `standaloneIss` to the `fhir-myrecord` URL.
-- `index.html` must be reached through the redirect. If you reload it after an expired or failed sign-in, an open profile falls back to open mode and says why.
-- Cerner access tokens last about 10 minutes; launch again when they expire. The Epic proxy refreshes its token by itself.
-- Client ids are identifiers, not secrets. The Cerner app is a public client with no secret; the Epic private key stays in the `smart-app` Python process and never reaches the browser.
-- Verified against the live sandboxes: Cerner open mode, HAPI, and Epic through the proxy. The Cerner sign-in itself needs your own code Console registration.
-
-## Ask about this patient
-
-The **Ask AI** tab (next to **Chart**) lets you ask an AI a question about the patient on screen. It sends a text copy of the chart (full lists up to 50 rows, each lab's recent history, and "None documented." for empty lists) and your question to the course proxy using your `OPENAI_TOKEN` (see [OpenAI Codex](../setup/codex.md)); the token stays in the local server and never reaches the browser. Open **What the AI sees** to read exactly what is sent: the system message (the standing instructions) and the user message (the chart text and your question). Use synthetic patients only.
+`--ehr cerner` opens the public Oracle Health sandbox with no login. `--ehr epic` needs your own Epic app. See [Advanced](../advanced.md) and the [dashboard internals](smart-app-internals.md).

@@ -1,114 +1,62 @@
-# Prerequisites
+# Install
 
-## Supported platforms
+Install three tools, then download the project. You will work in VS Code for everything. Windows, macOS and Ubuntu (including WSL) are supported.
 
-| Platform | Identifier |
-|---|---|
-| Linux (x86-64) | `linux-64` |
-| Windows (x86-64) | `win-64` |
-| macOS Intel | `osx-64` |
-| macOS Apple Silicon | `osx-arm64` |
+## 1. VS Code
 
-## Tools
+[Download VS Code](https://code.visualstudio.com/) and install it. Open it, and accept the recommended extensions (Python and Docker) when it offers them.
 
-Install these three tools, then get the project. All lessons use VS Code.
+## 2. pixi
 
-- **[VS Code](https://code.visualstudio.com/)** — the editor and terminal you will use for everything. Install it, then open the project folder with **File > Open Folder**. VS Code will offer to install the recommended extensions (Python and Docker); accept.
+pixi installs the project's software for you. In VS Code open a terminal (**Terminal > New Terminal**) and run the command for your system, then close and reopen VS Code.
 
-- **[pixi](https://pixi.sh)** — manages the Python environment and all dependencies. Run the command below in the VS Code terminal (**Terminal > New Terminal**), then close and reopen VS Code so it can find `pixi`.
-
-    === "Linux / macOS"
-        ```bash
-        curl -fsSL https://pixi.sh/install.sh | bash
-        ```
-    === "Windows (PowerShell)"
-        ```powershell
-        iwr -useb https://pixi.sh/install.ps1 | iex
-        ```
-
-- **[Docker](https://docs.docker.com/get-docker/)** — runs the local HAPI patient server (`pixi run hapi-up`). It is not needed for the Cerner or Epic sandboxes, but the lessons use the local server.
-
-    === "macOS"
-        1. Download [Docker Desktop for Mac](https://docs.docker.com/desktop/setup/install/mac-install/). Choose **Apple silicon** or **Intel** to match your Mac (**Apple menu > About This Mac** shows the chip).
-        2. Open `Docker.dmg`, drag **Docker** into **Applications**, then open it from Applications. The first start can take a few minutes while macOS checks it.
-        3. Accept the **Subscription Service Agreement**. Docker Desktop will not run until you do. You do not need to sign in.
-        4. Wait until Docker Desktop says it is running.
-
-        Requirements: the current macOS or one of the two previous major releases, and at least 4 GB of RAM. On Apple silicon, Rosetta 2 is recommended; install it with `softwareupdate --install-rosetta` if prompted.
-    === "Windows"
-        1. Download [Docker Desktop for Windows](https://docs.docker.com/desktop/setup/install/windows-install/) (x86_64 for most PCs).
-        2. Run `Docker Desktop Installer.exe`. Keep the default **WSL 2** backend and the default per-user install.
-        3. Click **Close** when it finishes, then **start Docker Desktop yourself** from the Start menu. It does not start automatically after installing.
-        4. Accept the **Subscription Service Agreement**. You do not need to sign in.
-        5. Wait until Docker Desktop says it is running.
-
-        Requirements: Windows 10 (22H2) or Windows 11 (23H2) or newer, 8 GB of RAM, and virtualization turned on in your PC's BIOS/UEFI (usually already on). Turning on WSL 2 for the first time needs administrator rights once; restart if it asks. Check your WSL version with `wsl --version` (2.1.5 or later).
-
-    === "Ubuntu / Linux"
-        Install [Docker Engine](https://docs.docker.com/engine/install/ubuntu/), then let your user run it without `sudo`, and log out and back in:
-
-        ```bash
-        sudo usermod -aG docker $USER
-        ```
-
-    !!! note "Docker Desktop licensing"
-        Docker Desktop is free for personal use, education and small businesses (under 250 employees and under $10 million annual revenue). A larger organization, such as many hospitals, needs a paid subscription for work use. If you are using this course on a work computer, ask your IT department.
-
-    Check that it works in the VS Code terminal:
-
+=== "macOS / Linux"
     ```bash
-    docker --version
-    docker ps
+    curl -fsSL https://pixi.sh/install.sh | bash
+    ```
+=== "Windows (PowerShell)"
+    ```powershell
+    iwr -useb https://pixi.sh/install.ps1 | iex
     ```
 
-    If `docker ps` says it cannot connect, Docker is installed but not running. Start Docker Desktop (or `sudo systemctl start docker` on Linux).
+## 3. Docker
 
-Pixi cannot install VS Code or Docker for you, and VS Code extensions cannot either: the Docker extension only manages Docker once it is installed.
+Docker runs your practice patient server.
 
-## Get the project
+=== "macOS"
+    1. Download [Docker Desktop for Mac](https://docs.docker.com/desktop/setup/install/mac-install/). Pick **Apple silicon** or **Intel** (Apple menu > About This Mac).
+    2. Drag **Docker** into **Applications** and open it.
+    3. Accept the agreement. You do not need to sign in.
+=== "Windows"
+    1. Download [Docker Desktop for Windows](https://docs.docker.com/desktop/setup/install/windows-install/) and run the installer with the default options (WSL 2). Restart if it asks.
+    2. Start Docker Desktop from the Start menu. It does not start by itself after installing.
+    3. Accept the agreement. You do not need to sign in.
+=== "Ubuntu"
+    Install [Docker Engine](https://docs.docker.com/engine/install/ubuntu/), then run this and log out and back in:
 
-Either download the project as a ZIP and unzip it, or clone it:
+    ```bash
+    sudo usermod -aG docker $USER
+    ```
 
-- **ZIP:** on [github.com/tonyreina/ehr_sandbox](https://github.com/tonyreina/ehr_sandbox) click **Code > Download ZIP**, unzip it, and open the folder in VS Code.
-- **Git:** `git clone https://github.com/tonyreina/ehr_sandbox.git`
+Needs: Windows 10 (22H2) or 11 with 8 GB of RAM and virtualization turned on in the BIOS (usually already on); macOS with 4 GB of RAM, the current or one of the two previous versions.
 
-Depending on the backend you want to use:
+Wait until Docker Desktop says it is running, then check in the VS Code terminal:
 
-- **Cerner (Oracle Health) open sandbox:** nothing else. No account needed. See [Cerner Sandbox](cerner-sandbox.md).
-- **Cerner signed-in SMART mode (optional):** a CernerCare account for code Console. See [Cerner Account & Registration](cerner-account.md).
-- **Epic in the browser dashboard:** nothing extra; it reuses the backend app. See [Epic in the Dashboard](epic-dashboard.md).
-- **Epic:** an **Epic developer account** at [fhir.epic.com](https://fhir.epic.com) and a **GitHub account** (to host your public JWK Set at a `raw.githubusercontent.com` URL; see [Keys](keys.md)).
+```bash
+docker ps
+```
 
-## Installation
+If it says it cannot connect, Docker is not running yet.
+
+!!! note "Docker Desktop licensing"
+    Free for education and personal use. Larger organizations, such as many hospitals, need a paid subscription for work use: ask your IT department if this is a work computer.
+
+## 4. Get the project
+
+On [github.com/tonyreina/ehr_sandbox](https://github.com/tonyreina/ehr_sandbox) click **Code > Download ZIP** and unzip it (or `git clone https://github.com/tonyreina/ehr_sandbox.git`). In VS Code choose **File > Open Folder** and open it. Then run:
 
 ```bash
 pixi install
 ```
 
-This installs all conda-forge packages **and** the `ehr` package itself as an editable install (via `pyproject.toml`), so changes to `ehr/` take effect immediately without reinstalling.
-
-## OpenAI Codex (course users)
-
-After `pixi install`, configure Codex with your **OpenAI Token**:
-
-```bash
-pixi run codex-setup <openai-token>
-```
-
-Then fully quit and reopen VS Code. See [OpenAI Codex](codex.md) for what it changes, verification, and WSL notes.
-
-## Python packages
-
-| Package | Purpose |
-|---|---|
-| `python-dotenv` | Load credentials from `.env` |
-| `requests` | HTTP calls to the FHIR API |
-| `pyjwt` | Sign JWTs for client credentials auth |
-| `cryptography` | RSA key generation |
-| `typer` | CLI framework |
-| `fhirclient` | FHIR model helpers |
-| `zensical` | Documentation site generator |
-| `hatchling` | Build backend for the editable install |
-
-
-
+The first run takes a few minutes. Next: [Connect Codex](codex.md).
