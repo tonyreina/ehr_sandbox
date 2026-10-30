@@ -16,6 +16,7 @@ nav = [
     "setup/cerner-account.md",
     "setup/epic-dashboard.md",
     "setup/local-hapi.md",
+    "setup/codex.md",
   ] },
   { "Authentication" = "auth.md" },
   { "EHR Clients" = "ehr-clients.md" },

@@ -477,5 +477,24 @@ def smart_app(
             hapi_local.down()
 
 
+@app.command("codex-setup")
+def codex_setup(
+    key: Annotated[Optional[str], typer.Argument(help="Learner API key (prompted, hidden, if omitted)")] = None,
+):
+    """Point OpenAI Codex at the Great Learning proxy and store your learner key."""
+    from ehr import codex
+    if not key:
+        key = typer.prompt("Learner API key", hide_input=True).strip()
+    if not key:
+        raise typer.BadParameter("API key must not be empty")
+    path, backup = codex.write_config()
+    where = codex.store_key(key)
+    if backup:
+        typer.echo(f"Existing Codex config saved to {backup}")
+    typer.echo(f"Codex configured.\n  Config:   {path}\n  Proxy:    {codex.PROXY_URL}\n"
+               f"  Model:    {codex.DEFAULT_MODEL}\n  Key ({codex.ENV_VAR}) stored in: {where}")
+    typer.echo("\nNext: fully quit VS Code and reopen it (or open a new terminal and run `code`).")
+
+
 if __name__ == "__main__":
     app()

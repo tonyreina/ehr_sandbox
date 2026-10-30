@@ -172,6 +172,18 @@ See [Setup → Keys](setup/keys.md) for next steps after generation.
 
 ---
 
+## codex-setup
+
+Point OpenAI Codex at the Great Learning proxy and store your learner key (Windows, macOS, Linux, WSL).
+
+```bash
+pixi run codex-setup [<learner-api-key>]
+```
+
+Omit the key to be prompted for it (input hidden). See [OpenAI Codex](setup/codex.md).
+
+---
+
 ## docs
 
 Serve the Zensical documentation site locally.

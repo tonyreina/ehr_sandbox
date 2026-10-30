@@ -19,6 +19,16 @@ pixi run smart-app        # patient dashboard: http://localhost:8765/index.html
 
 No account is needed for the default Cerner open sandbox.
 
+## Set up OpenAI Codex (course learners)
+
+Point Codex at the Great Learning proxy and store your learner key (works in Windows PowerShell, macOS, Ubuntu and WSL):
+
+```bash
+pixi run codex-setup <learner-api-key>
+```
+
+Then fully quit and reopen VS Code. Omit the key to be prompted for it. Run it inside WSL if you use a WSL window in VS Code. Details: [OpenAI Codex setup](https://tonyreina.github.io/ehr_sandbox/setup/codex/).
+
 ## Documentation
 
 Setup for Epic and Cerner, authentication, the dashboard, CLI reference and test patients:
