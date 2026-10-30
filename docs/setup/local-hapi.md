@@ -4,7 +4,7 @@ Run your own [HAPI FHIR](https://hapifhir.io) R4 server in Docker and fill it wi
 
 ## Requirements
 
-[Docker](https://docs.docker.com/get-docker/) running on your machine. Nothing else to install: HAPI and Synthea both run from Docker images (Synthea needs Java 17, which comes from its image).
+[Docker](https://docs.docker.com/get-docker/) installed and running on your machine (see [Prerequisites](prerequisites.md)). Nothing else to install: HAPI and Synthea both run from Docker images (Synthea needs Java 17, which comes from its image).
 
 ## Start the server and load patients
 

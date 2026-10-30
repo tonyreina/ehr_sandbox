@@ -11,7 +11,11 @@
 
 ## Tools
 
-- **[pixi](https://pixi.sh)** — manages the Python environment and all dependencies.
+Install these three tools, then get the project. All lessons use VS Code.
+
+- **[VS Code](https://code.visualstudio.com/)** — the editor and terminal you will use for everything. Install it, then open the project folder with **File > Open Folder**. VS Code will offer to install the recommended extensions (Python and Docker); accept.
+
+- **[pixi](https://pixi.sh)** — manages the Python environment and all dependencies. Run the command below in the VS Code terminal (**Terminal > New Terminal**), then close and reopen VS Code so it can find `pixi`.
 
     === "Linux / macOS"
         ```bash
@@ -21,6 +25,35 @@
         ```powershell
         iwr -useb https://pixi.sh/install.ps1 | iex
         ```
+
+- **[Docker](https://docs.docker.com/get-docker/)** — runs the local HAPI patient server (`pixi run hapi-up`). It is not needed for the Cerner or Epic sandboxes, but the lessons use the local server.
+
+    === "Windows / macOS"
+        Install [Docker Desktop](https://www.docker.com/products/docker-desktop/), start it, and wait until it says it is running. On Windows the installer also sets up WSL 2; restart if it asks.
+    === "Ubuntu / Linux"
+        Install [Docker Engine](https://docs.docker.com/engine/install/ubuntu/), then let your user run it without `sudo`, and log out and back in:
+
+        ```bash
+        sudo usermod -aG docker $USER
+        ```
+
+    Check that it works in the VS Code terminal:
+
+    ```bash
+    docker --version
+    docker ps
+    ```
+
+    If `docker ps` says it cannot connect, Docker is installed but not running. Start Docker Desktop (or `sudo systemctl start docker` on Linux).
+
+Pixi cannot install VS Code or Docker for you, and VS Code extensions cannot either: the Docker extension only manages Docker once it is installed.
+
+## Get the project
+
+Either download the project as a ZIP and unzip it, or clone it:
+
+- **ZIP:** on [github.com/tonyreina/ehr_sandbox](https://github.com/tonyreina/ehr_sandbox) click **Code > Download ZIP**, unzip it, and open the folder in VS Code.
+- **Git:** `git clone https://github.com/tonyreina/ehr_sandbox.git`
 
 Depending on the backend you want to use:
 

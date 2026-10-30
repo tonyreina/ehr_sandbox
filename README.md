@@ -8,11 +8,9 @@ Based on the blog post [FHIR Practical Interoperability](https://www.doctorswhoc
 
 ## Install
 
-Requires [pixi](https://pixi.sh).
+Install [VS Code](https://code.visualstudio.com/), [pixi](https://pixi.sh) and [Docker](https://docs.docker.com/get-docker/) (Docker is for the local HAPI server). Then download the project (**Code > Download ZIP** on GitHub and unzip it, or `git clone https://github.com/tonyreina/ehr_sandbox.git`), open the folder in VS Code and run these in its terminal. Details: [Prerequisites](https://tonyreina.github.io/ehr_sandbox/setup/prerequisites/).
 
 ```bash
-git clone https://github.com/tonyreina/ehr_sandbox.git
-cd ehr_sandbox
 pixi install
 pixi run smart-app        # patient dashboard: http://localhost:8765/index.html
 ```
