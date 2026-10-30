@@ -9,17 +9,23 @@ If this is your first time using a terminal, follow the steps exactly as written
 1. Press **Cmd + Space**, type **Terminal**, and press **Enter**.
 2. Go to the project folder (adjust the path if you cloned it somewhere else):
 
-```bash
-cd ~/ehr_sandbox
-```
+    ```bash
+    cd ~/ehr_sandbox
+    ```
 
 3. Copy and paste this command, then press **Enter**:
 
-```bash
-pixi run codex-setup <openai-token>
-```
+    ```bash
+    pixi run codex-setup <openai-token>
+    ```
 
 4. Replace `<openai-token>` with your real **OpenAI Token**.
+
+    Example:
+
+    ```bash
+    pixi run codex-setup gh-abcd
+    ```
 
 Or run this instead and paste your **OpenAI Token** when prompted (the input is hidden on purpose):
 
@@ -40,17 +46,17 @@ On macOS the setup also:
 3. Click **Windows PowerShell**.
 4. In the blue/black window, copy and paste this command, then press **Enter**:
 
-```powershell
-pixi run codex-setup <openai-token>
-```
+    ```powershell
+    pixi run codex-setup <openai-token>
+    ```
 
 5. Replace `<openai-token>` with your real **OpenAI Token**.
 
-Example:
+    Example:
 
-```powershell
-pixi run codex-setup gl-abc123efgh4567IJKLM890...
-```
+    ```powershell
+    pixi run codex-setup gh-abcd
+    ```
 
 If you do not want to paste your **OpenAI Token** in the command, run this instead:
 
