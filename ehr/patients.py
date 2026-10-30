@@ -20,6 +20,17 @@ PATIENTS: dict[str, dict[str, tuple[str, str, str, str]]] = {
         "wilm":  ("12724065", "Wilm Smart",      "1990-09-15", "M"),
         "tim":   ("12742400", "Tim Peters",      "1990-09-15", "M"),
     },
+    # Teaching scenarios loaded by `pixi run hapi-scenarios` (see ehr/scenarios.py)
+    "hapi": {
+        "maria":  ("scn-maria",  "Maria Alvarez",   "1963-05-08", "F"),
+        "robert": ("scn-robert", "Robert Kline",    "1954-11-21", "M"),
+        "helen":  ("scn-helen",  "Helen Park",      "1947-02-02", "F"),
+        "david":  ("scn-david",  "David Okafor",    "1980-07-30", "M"),
+        "susan":  ("scn-susan",  "Susan Whitfield", "1967-09-14", "F"),
+        "alex":   ("scn-alex",   "Alex Rivera",     "1991-03-03", "M"),
+        "smith1": ("scn-smith1", "John Smith",      "1958-03-14", "M"),
+        "smith2": ("scn-smith2", "Jon Smith",       "1985-03-14", "M"),
+    },
 }
 
 # (default for `patient`, default for `observations`)

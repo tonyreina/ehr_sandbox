@@ -233,6 +233,27 @@ def hapi_load(
     typer.echo("Try: pixi run list-patients --ehr hapi      pixi run smart-app --ehr hapi")
 
 
+@app.command("hapi-scenarios")
+def hapi_scenarios(
+    answers: Annotated[bool, typer.Option("--answers", help="Print the instructor answer key instead of loading")] = False,
+):
+    """Load hand-written teaching patients (each hides one known problem) into the local HAPI server."""
+    from ehr import hapi_local, scenarios
+    if answers:
+        for sc in scenarios.SCENARIOS.values():
+            typer.echo(f"{sc.key}  {sc.name[0]} {sc.name[1]}\n  Chart:    {sc.summary}\n"
+                       f"  Finding:  {sc.finding}\n  Ask:      {sc.prompt}\n")
+        return
+    if not hapi_local.ready():
+        typer.echo("HAPI is not running. Start it with `pixi run hapi-up`.", err=True)
+        raise typer.Exit(1)
+    for key, n in scenarios.load(hapi_local.BASE):
+        sc = scenarios.SCENARIOS[key]
+        typer.echo(f"  {key:<8} {sc.name[0] + ' ' + sc.name[1]:<18} {n:>2} resources  {sc.summary}")
+    typer.echo("Try: pixi run patient maria --ehr hapi      pixi run observations robert --ehr hapi")
+    typer.echo("Answer key for instructors: pixi run hapi-scenarios --answers")
+
+
 SMART_EHRS = ("cerner",)            # EHRs with a browser SMART sign-in to register
 DASHBOARD_EHRS = ("cerner", "epic", "hapi")
 
