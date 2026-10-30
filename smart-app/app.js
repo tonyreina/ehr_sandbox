@@ -289,9 +289,9 @@ async function loadPatient(client, patientId) {
         ["Medication", "Dose", "Status"], "No medications on file.", "medications")),
     section(token, "allergies", () => bundle(client, `AllergyIntolerance?patient=${pid}&_count=50`), rs => {
       const as = allergies(rs);
-      setChip("chip-allergies", as.length ? `Allergies (${as.length})` : "No known allergies");
+      setChip("chip-allergies", as.length ? `Allergies (${as.length})` : "No allergies documented");
       renderList("allergies", as.map(a => [a.name, a.reactions, badge(a.criticality)]),
-        ["Allergen", "Reactions", "Criticality"], "No known allergies on file.", "allergies");
+        ["Allergen", "Reactions", "Criticality"], "None documented. A patient may still have allergies that were never recorded.", "allergies");
     }, () => setChip("chip-allergies", "Allergies: unavailable")),
     section(token, "encounters", () => bundle(client, `Encounter?patient=${pid}&_count=20`), rs => {
       const es = encounters(rs);

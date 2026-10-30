@@ -162,6 +162,11 @@ def main() -> None:
             check("changing patient keeps the tab and clears the old answer", sel() == ["false", "true"] and page.is_hidden("#ask-answer"))
             check("changing patient closes What the AI sees", not page.evaluate("document.querySelector('#sec-ask details').open"))
 
+            page.wait_for_function("() => !/Loading/.test(document.getElementById('allergies').innerText)", timeout=30000)
+            check("empty allergy list says 'documented', not 'known'",
+                  page.text_content("#chip-allergies") == "No allergies documented"
+                  and "None documented" in page.inner_text("#allergies") and "known" not in page.inner_text("#allergies").lower())
+
             check("no JavaScript errors", not errors)
             if errors:
                 print("      ", errors[:3])
