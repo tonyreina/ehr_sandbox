@@ -150,7 +150,7 @@ td.abnormal-low { font-weight: 700; color: var(--flag-low); }
 .loading { opacity: .6; }
 
 /* ---- ask the AI ---- */
-.ask-examples { display: flex; flex-wrap: wrap; gap: .4rem; margin-bottom: .5rem; }
+.ask-examples { display: flex; flex-wrap: wrap; gap: .4rem; margin: .6rem 0 .6rem; }
 .ask-examples button { font: inherit; font-size: .8rem; padding: .2rem .55rem; border: 1px solid var(--border);
                        border-radius: 999px; background: var(--card); color: inherit; cursor: pointer; }
 #ask-q { width: 100%; box-sizing: border-box; font: inherit; padding: .4rem .5rem; border: 1px solid var(--border);
@@ -161,3 +161,12 @@ td.abnormal-low { font-weight: 700; color: var(--flag-low); }
 .ask-answer, .ask-chart { white-space: pre-wrap; word-break: break-word; font: inherit; margin: .5rem 0 0;
                           padding: .6rem .7rem; border: 1px solid var(--border); border-radius: 4px; background: var(--surface); }
 .ask-chart { font-size: .78rem; max-height: 18rem; overflow: auto; }
+
+/* ---- Chart / Ask AI tabs ---- */
+.tabs { display: flex; gap: .25rem; padding: .5rem 1rem 0; max-width: 90rem; margin: 0 auto; border-bottom: 1px solid var(--border); }
+.tabs button { font: inherit; font-weight: 600; padding: .45rem 1.1rem; border: 0; border-bottom: 3px solid transparent;
+               background: none; color: var(--text-2); cursor: pointer; }
+.tabs button:hover { color: inherit; }
+.tabs button[aria-selected="true"] { color: inherit; border-bottom-color: var(--banner-edge); }
+.ask-pane { max-width: 56rem; margin: 0 auto; padding: 1rem; }
+.ask-pane[hidden], #pane-chart[hidden] { display: none; }
