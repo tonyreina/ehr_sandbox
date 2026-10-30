@@ -6,13 +6,13 @@
 
 ## Setup
 
-Finish [OpenAI Codex](../setup/codex.md) first (`pixi run codex-setup`, then fully restart VS Code). Then start the dashboard:
+Finish [OpenAI Codex](../setup/codex.md) first (`pixi run codex-setup`). Then start the dashboard:
 
 ```bash
 pixi run smart-app --ehr hapi
 ```
 
-The terminal line **Ask box: ready** confirms your token was found. If it says it needs a token, redo the Codex setup.
+The terminal line **Ask box: ready** confirms your token was found. If it says it needs a token, run `pixi run codex-setup` and start the dashboard again.
 
 ## How the Ask box works
 
@@ -54,7 +54,7 @@ A good question has four parts:
 
 | Symptom | Fix |
 |---|---|
-| "No OPENAI_TOKEN found" | Run `pixi run codex-setup`, fully restart VS Code, and start `smart-app` again. |
+| "No OPENAI_TOKEN found" | Run `pixi run codex-setup`, then stop the dashboard (Ctrl + C) and start `smart-app` again. |
 | "rejected your token" | Check the token, then run `pixi run codex-setup` again. |
-| The Ask button is greyed out | The token was not found when `smart-app` started. Same fix as above. |
+| A "No token found yet" note under the Ask box | The token was not found when `smart-app` started. Same fix as above. |
 | The answer ignores a panel | Wait until the panels finish loading, then ask again. Check **What the AI sees**. |

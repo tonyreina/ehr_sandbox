@@ -91,4 +91,20 @@ def store_key(key: str) -> str:
     return str(rc)
 
 
+def saved_token() -> str | None:
+    """The key saved by store_key, read straight from where it was stored.
 
+    A terminal or VS Code window opened before `codex-setup` ran does not have OPENAI_TOKEN in
+    its environment until it is restarted; this lets the dashboard find the key anyway.
+    """
+    try:
+        if sys.platform == "win32":
+            import winreg
+            with winreg.OpenKey(winreg.HKEY_CURRENT_USER, "Environment") as k:
+                return (winreg.QueryValueEx(k, ENV_VAR)[0] or "").strip() or None
+        text = rc_file().read_text(encoding="utf-8")
+    except OSError:
+        return None
+    block = re.search(rf"{re.escape(BLOCK_START)}(.*?){re.escape(BLOCK_END)}", text, re.S)
+    m = block and re.search(rf'^export {ENV_VAR}="(.*)"$', block.group(1), re.M)
+    return re.sub(r"\\(.)", r"\1", m.group(1)).strip() or None if m else None

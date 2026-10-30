@@ -29,7 +29,8 @@ class AskError(Exception):
 
 
 def token() -> str | None:
-    return (os.getenv(codex.ENV_VAR) or "").strip() or None
+    """OPENAI_TOKEN from the environment, else the copy `codex-setup` saved (no restart needed)."""
+    return (os.getenv(codex.ENV_VAR) or "").strip() or codex.saved_token()
 
 
 def _output_text(data: dict) -> str:
@@ -44,8 +45,7 @@ def _output_text(data: dict) -> str:
 def ask(chart: str, question: str, base_url: str = codex.PROXY_URL) -> str:
     key = token()
     if not key:
-        raise AskError(f"No {codex.ENV_VAR} found. Run `pixi run codex-setup`, then fully restart VS Code "
-                       "and start the dashboard again.")
+        raise AskError(f"No {codex.ENV_VAR} found. Run `pixi run codex-setup`, then start the dashboard again.")
     question = question.strip()
     if not question:
         raise AskError("Type a question first.")

@@ -181,8 +181,7 @@ function setupAsk() {
     $("ask-examples").append(b);
   }
   if (!window.SMART_ASK) {
-    btn.disabled = true;
-    status.textContent = "Not set up yet: run `pixi run codex-setup` with your token, restart VS Code, then start the dashboard again.";
+    status.textContent = "No token found yet: run `pixi run codex-setup` in the VS Code terminal, then stop (Ctrl + C) and restart the dashboard.";
   }
   $("ask-chart").closest("details").addEventListener("toggle", () => { $("ask-chart").textContent = chartText(); });
   btn.addEventListener("click", async () => {
