@@ -30,6 +30,29 @@ pixi run hapi-down                 # stop; patients are kept
 pixi run hapi-down --delete-data   # stop and delete all patients
 ```
 
+## Teaching scenarios
+
+Synthea patients are realistic but random. For lessons where a learner's AI tool is scored against a known answer, load eight hand-written patients that each hide one problem:
+
+```bash
+pixi run hapi-scenarios            # safe to re-run; refreshes the same patients
+pixi run patient maria --ehr hapi
+pixi run observations robert --ehr hapi
+```
+
+| Key | Patient | Chart |
+|---|---|---|
+| `maria` | Maria Alvarez | Type 2 diabetes on metformin |
+| `robert` | Robert Kline | Hypertension and heart failure, a year of labs |
+| `helen` | Helen Park | Atrial fibrillation on warfarin, recent infection |
+| `david` | David Okafor | Seen for sinusitis |
+| `susan` | Susan Whitfield | COPD, with a visit note |
+| `alex` | Alex Rivera | One visit, almost no data |
+| `smith1` | John Smith | Heart failure |
+| `smith2` | Jon Smith | Asthma (a look-alike of `smith1`) |
+
+Dates are relative to today, so "months ago" stays true. Instructors can print the planted problem and a good test question for each patient with `pixi run hapi-scenarios --answers`; keep that output away from learners until they have tried the exercise. The data is fictional teaching data (codes are illustrative), not for clinical use.
+
 ## Use it
 
 ```bash
