@@ -1,4 +1,4 @@
-"""Browser test of the dashboard's Chart / Ask AI tabs (run: pixi run -e dev ui-test [--screenshots DIR]).
+"""Browser test of the dashboard's Chart / Ask AI tabs (run: pixi run -e dev ui-test [--screenshots DIR] [--dark]).
 
 Needs no internet and no token: the dashboard talks to a small fake FHIR server built from the
 teaching scenarios in ehr/scenarios.py, and the /api/ask call is answered by the test.
@@ -106,7 +106,7 @@ def main() -> None:
                 time.sleep(0.5)
         with sync_playwright() as pw:
             browser = pw.chromium.launch()
-            page = browser.new_page(viewport={"width": 1280, "height": 900})
+            page = browser.new_page(viewport={"width": 1280, "height": 900}, color_scheme="dark" if "--dark" in sys.argv else "light")
             errors: list[str] = []
             page.on("pageerror", lambda e: errors.append(str(e)))
             asked: list[dict] = []
@@ -114,7 +114,9 @@ def main() -> None:
             def fake_ask(route):
                 asked.append(json.loads(route.request.post_data))
                 route.fulfill(status=200, content_type="application/json",
-                              body=json.dumps({"answer": "MOCK ANSWER: Metformin (Medications)."}))
+                              body=json.dumps({"answer": "MOCK ANSWER: Metformin (Medications).", "model": "gpt-5.3-codex",
+                                               "input_tokens": 1234, "output_tokens": 56, "cost_usd": 0.002944,
+                                               "cost_estimated": True}))
             page.route("**/api/ask", fake_ask)
 
             page.goto(f"http://localhost:{port}/index.html?ehr=hapi")
@@ -142,15 +144,28 @@ def main() -> None:
             page.click("#ask-btn")
             page.wait_for_selector("#ask-answer:not([hidden])")
             check("the mocked answer is shown", "MOCK ANSWER" in page.text_content("#ask-answer"))
+            chips = page.locator("#ask-meta .chip").all_text_contents()
+            check("chips show model, estimated cost and token counts",
+                  chips == ["Model: gpt-5.3-codex", "Cost: ≈ $0.0029", "Input tokens: 1,234", "Output tokens: 56"])
+            check("the cost chip explains it is an estimate", "Estimated" in (page.get_attribute("#ask-meta .chip >> nth=1", "title") or ""))
             check("the request carried the chart and question", len(asked) == 1 and "Metformin" in asked[0]["chart"] and "Summarize" in asked[0]["question"])
 
             page.click("#sec-ask details summary")
             seen = page.text_content("#ask-chart")
             check("What the AI sees shows the system message", "SYSTEM MESSAGE" in seen and "Not documented in this chart" in seen)
             check("What the AI sees shows the chart and question", "USER MESSAGE" in seen and "== Medications ==" in seen and "QUESTION: Summarize" in seen)
+            green = lambda sel: page.evaluate("(s) => { const c = getComputedStyle(document.querySelector(s)).color.match(/\\d+/g).map(Number); return c[1] > c[0] + 30 && c[1] > c[2] + 30; }", sel)
+            check("the system message is green", green("#ask-chart .ask-system"))
+            check("the system message span holds only the system message",
+                  page.text_content("#ask-chart .ask-system").startswith("SYSTEM MESSAGE") and "USER MESSAGE" not in page.text_content("#ask-chart .ask-system"))
+            check("the user message is not green", not page.evaluate("() => { const c = getComputedStyle(document.querySelector('#ask-chart')).color.match(/\\d+/g).map(Number); return c[1] > c[0] + 30 && c[1] > c[2] + 30; }"))
             page.fill("#ask-q", "Typed live?")
             check("What the AI sees updates as you type", "QUESTION: Typed live?" in page.text_content("#ask-chart"))
 
+            if "--screenshots" in sys.argv:         # the open "What the AI sees" box
+                shots = Path(sys.argv[sys.argv.index("--screenshots") + 1])
+                shots.mkdir(parents=True, exist_ok=True)
+                page.screenshot(path=str(shots / "sees.png"), full_page=True)
             page.focus("#tab-ask")
             page.keyboard.press("ArrowLeft")
             check("ArrowLeft moves to the Chart tab", sel() == ["true", "false"])
@@ -160,6 +175,7 @@ def main() -> None:
             page.select_option("#patient-select", "scn-alex")
             page.wait_for_function("() => document.querySelector('#name').textContent.includes('Rivera')", timeout=30000)
             check("changing patient keeps the tab and clears the old answer", sel() == ["false", "true"] and page.is_hidden("#ask-answer"))
+            check("changing patient hides the old chips", page.is_hidden("#ask-meta"))
             check("changing patient closes What the AI sees", not page.evaluate("document.querySelector('#sec-ask details').open"))
 
             page.wait_for_function("() => !/Loading/.test(document.getElementById('allergies').innerText)", timeout=30000)

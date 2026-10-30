@@ -1,4 +1,5 @@
 """FHIR Sandbox CLI (Epic, Cerner, HAPI)."""
+import json
 import os
 import re
 import subprocess
@@ -502,8 +503,8 @@ def smart_app(
                 return self._send(403, b'{"error": "forbidden"}', "application/json")
             try:
                 data = json.loads(self.rfile.read(min(int(self.headers.get("Content-Length", 0)), 200_000)))
-                answer = ask_mod.ask(str(data.get("chart", "")), str(data.get("question", "")))
-                return self._send(200, json.dumps({"answer": answer}).encode(), "application/json")
+                r = ask_mod.ask_detail(str(data.get("chart", "")), str(data.get("question", "")))
+                return self._send(200, json.dumps(r.public()).encode(), "application/json")
             except (ValueError, TypeError):
                 return self._send(400, b'{"error": "Bad request."}', "application/json")
             except ask_mod.AskError as e:
@@ -568,7 +569,9 @@ def _mask_codex_key(value: str) -> str:
 
 
 @app.command("codex-check")
-def codex_check():
+def codex_check(
+    raw: Annotated[bool, typer.Option("--raw", help="Also print the proxy's full reply (no token in it)")] = False,
+):
     """Send one tiny test question to the course proxy and show exactly what comes back."""
     from ehr import ask as ask_mod
     from ehr import codex
@@ -580,11 +583,16 @@ def codex_check():
     source = "environment" if os.getenv(codex.ENV_VAR) else "saved by codex-setup"
     typer.echo(f"Token:  {_mask_codex_key(key)} ({len(key)} characters, from the {source})")
     try:
-        answer = ask_mod.ask("Patient: Test Patient\n== Medications ==\nMetformin 500 mg", "Which medication is listed? Answer in a few words.")
+        result = ask_mod.ask_detail("Patient: Test Patient\n== Medications ==\nMetformin 500 mg", "Which medication is listed? Answer in a few words.")
     except ask_mod.AskError as e:
         typer.echo(f"Result: FAILED - {e}", err=True)
         raise typer.Exit(1)
-    typer.echo(f"Result: OK - the model answered: {answer}")
+    typer.echo(f"Result: OK - the model answered: {result.answer}")
+    if raw:
+        cost = "not reported" if result.cost_usd is None else f"${result.cost_usd:.6f}" + (" (estimated)" if result.cost_estimated else " (from the proxy)")
+        typer.echo(f"Model: {result.model} | tokens in/out: {result.input_tokens}/{result.output_tokens} | cost: {cost}")
+        typer.echo("Reply headers: " + ", ".join(result.raw["headers"]))
+        typer.echo("Reply body: " + json.dumps(result.raw["body"], indent=2))
 
 
 @app.command("codex-setup")
