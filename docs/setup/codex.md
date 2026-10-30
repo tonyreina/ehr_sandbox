@@ -1,19 +1,14 @@
-﻿# OpenAI Codex
+# OpenAI Codex
 
-This setup is for course users using the course OpenAI proxy.
+This setup is for course users using the course OpenAI proxy. All lessons use **VS Code**, so every step below happens inside VS Code.
 
 If this is your first time using a terminal, follow the steps exactly as written.
 
-## Quick setup (macOS)
+## Quick setup
 
-1. Press **Cmd + Space**, type **Terminal**, and press **Enter**.
-2. Go to the project folder (adjust the path if you cloned it somewhere else):
-
-    ```bash
-    cd ~/ehr_sandbox
-    ```
-
-3. Copy and paste this command, then press **Enter**:
+1. Open the `ehr_sandbox` project folder in VS Code (**File > Open Folder**).
+2. Open the terminal in VS Code: **Terminal > New Terminal**. It opens at the bottom of the window, already in the project folder, so you do not need to `cd` anywhere.
+3. Copy and paste this command into the terminal, then press **Enter**:
 
     ```bash
     pixi run codex-setup <openai-token>
@@ -24,7 +19,7 @@ If this is your first time using a terminal, follow the steps exactly as written
     Example:
 
     ```bash
-    pixi run codex-setup gh-abcd
+    pixi run codex-setup gh-abcd1234EFGH5678ijk90
     ```
 
 Or run this instead and paste your **OpenAI Token** when prompted (the input is hidden on purpose):
@@ -33,61 +28,44 @@ Or run this instead and paste your **OpenAI Token** when prompted (the input is 
 pixi run codex-setup
 ```
 
-On macOS the setup also:
-
-- Saves Codex settings to `~/.codex/config.toml`.
-- Adds a line to your shell startup file (`~/.zshrc`, or `~/.bash_profile` if you use bash) that sets `OPENAI_TOKEN` in every new Terminal window.
-- Registers `OPENAI_TOKEN` with macOS so VS Code opened from the Dock or Spotlight can see it.
-
-## Quick setup (Windows)
-
-1. Open the **Start menu**.
-2. Type **PowerShell**.
-3. Click **Windows PowerShell**.
-4. In the blue/black window, copy and paste this command, then press **Enter**:
-
-    ```powershell
-    pixi run codex-setup <openai-token>
-    ```
-
-5. Replace `<openai-token>` with your real **OpenAI Token**.
-
-    Example:
-
-    ```powershell
-    pixi run codex-setup gh-abcd
-    ```
-
-If you do not want to paste your **OpenAI Token** in the command, run this instead:
-
-```powershell
-pixi run codex-setup
-```
-
-Then paste your **OpenAI Token** when prompted (the input is hidden on purpose).
+The same command works on Windows, macOS, Ubuntu and WSL.
 
 ## What this command does automatically
 
 You do **not** need to configure anything manually.
 
-- Saves Codex settings to `%USERPROFILE%\.codex\config.toml`.
+- Saves Codex settings to `config.toml` in the `.codex` folder in your home directory.
 - Sets the API base URL to the course proxy endpoint automatically.
-- Saves your **OpenAI Token** as a Windows user environment variable named `OPENAI_TOKEN`.
+- Saves your **OpenAI Token** in an environment variable named `OPENAI_TOKEN`:
+    - **Windows:** a user environment variable.
+    - **macOS:** a line in `~/.zshrc` (or `~/.bash_profile` if you use bash), plus a registration with macOS so VS Code opened from the Dock or Spotlight can see it.
+    - **Ubuntu and WSL:** a line in `~/.bashrc` (or `~/.zshrc` if you use zsh).
 
 ## Finish setup
+
+VS Code only reads the token when it starts, so you must restart it completely:
 
 1. Fully close VS Code (on macOS press **Cmd + Q**; closing the window is not enough).
 2. Open VS Code again.
 3. Open the Codex extension.
 
-## Simple check (Windows)
+## Simple check
 
-Open a **new** PowerShell window and run:
+Open a **new** terminal in VS Code (**Terminal > New Terminal**) and run:
 
-```powershell
-Get-Content ~\.codex\config.toml
-$env:OPENAI_TOKEN
-```
+=== "Windows (PowerShell)"
+
+    ```powershell
+    Get-Content ~\.codex\config.toml
+    $env:OPENAI_TOKEN
+    ```
+
+=== "macOS / Ubuntu / WSL"
+
+    ```bash
+    cat ~/.codex/config.toml
+    echo $OPENAI_TOKEN
+    ```
 
 You should see:
 
@@ -95,33 +73,24 @@ You should see:
 - `env_key = "OPENAI_TOKEN"`
 - Your **OpenAI Token** printed after the second command.
 
-If you do not see your **OpenAI Token**, close PowerShell and VS Code completely, reopen both, and run the check again.
+If you do not see your **OpenAI Token**, fully close VS Code, reopen it, and run the check again.
 
-## Simple check (macOS)
+## If the Codex extension still asks for a key
 
-Open a **new** Terminal window and run:
-
-```bash
-cat ~/.codex/config.toml
-echo $OPENAI_TOKEN
-```
-
-You should see the same three things as on Windows: a `base_url` pointing to the course proxy, `env_key = "OPENAI_TOKEN"`, and your **OpenAI Token**.
-
-If the Codex extension still asks for a key, quit VS Code with **Cmd + Q**, then open a new Terminal window and start it from there:
+On macOS the registration with the Dock lasts only until you restart your Mac, and on Ubuntu a VS Code started from the app launcher does not read `~/.bashrc`. In both cases, fully quit VS Code and start it from a terminal instead:
 
 ```bash
 code
 ```
 
-The macOS registration lasts until you restart your Mac. After a restart, either start VS Code with `code` from Terminal or run `pixi run codex-setup` again.
+Or run `pixi run codex-setup` again.
 
 ## If you use WSL
 
 Run setup in the same place where Codex runs:
 
-- VS Code window says **WSL: Ubuntu** -> run setup in the WSL terminal.
-- Normal VS Code window (not WSL) -> run setup in Windows PowerShell.
+- VS Code window says **WSL: Ubuntu** in the bottom-left corner -> run setup in that window's terminal.
+- Normal VS Code window (not WSL) -> run setup in that window's terminal (PowerShell on Windows).
 
 If you use both, run setup in both.
 
