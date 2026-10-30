@@ -10,23 +10,25 @@ use_directory_urls = true
 
 nav = [
   { "Home" = "index.md" },
-  { "Setup" = [
+  { "Start here" = [
     "setup/prerequisites.md",
-    "setup/keys.md",
-    "setup/epic-portal.md",
-    "setup/cerner-sandbox.md",
-    "setup/cerner-account.md",
-    "setup/epic-dashboard.md",
-    "setup/local-hapi.md",
     "setup/codex.md",
-  ] },
-  { "Authentication" = "auth.md" },
-  { "EHR Clients" = "ehr-clients.md" },
-  { "CLI" = "cli.md" },
-  { "Demos" = [
-    "demos/patient.md",
-    "demos/observations.md",
+    "setup/local-hapi.md",
     "demos/smart-app.md",
   ] },
-  { "Reference" = "reference.md" },
+  { "Advanced" = [
+    "advanced.md",
+    "setup/keys.md",
+    "setup/epic-portal.md",
+    "setup/epic-dashboard.md",
+    "setup/cerner-sandbox.md",
+    "setup/cerner-account.md",
+    "auth.md",
+    "ehr-clients.md",
+    "cli.md",
+    "demos/patient.md",
+    "demos/observations.md",
+    "demos/smart-app-internals.md",
+    "reference.md",
+  ] },
 ]

@@ -1,50 +1,12 @@
 # FHIR Sandbox
 
-Python demos for querying FHIR R4 servers: Epic (backend system OAuth 2.0 client credentials) and the Oracle Health (Cerner) open sandbox (no auth).
+Practice with realistic synthetic patients: look at a chart in your browser, then ask an AI about it and check its answers. No coding needed.
 
-The project is built around a multi-EHR abstraction layer — swap `EHR_TYPE` in `.env` to target a different server without changing any code.
+## Start here
 
-Based on [FHIR Practical Interoperability](https://www.doctorswhocode.blog/blog/fhir-practical-interoperability/).
+1. [Install the tools](setup/prerequisites.md): VS Code, pixi and Docker.
+2. [Connect Codex](setup/codex.md): save your course token and test it.
+3. [Start the practice patients](setup/local-hapi.md).
+4. [Open the dashboard](demos/smart-app.md) and use the **Ask AI** tab.
 
-## How it fits together
-
-```mermaid
-flowchart LR
-    CLI["pixi run patient / observations"] --> F[ClientFactory]
-    Demos[demos/*.py] --> F
-    F -->|EHR_TYPE=epic| EP[EpicClient]
-    F -->|EHR_TYPE=cerner| CE[CernerClient]
-    F -->|EHR_TYPE=hapi| HA[HapiFhirClient]
-    EP -->|"JWT client credentials"| EPIC[(Epic sandbox)]
-    CE -->|"no auth"| CERN[(Cerner open sandbox)]
-    HA -->|"no auth"| HAPI[("HAPI server (local or public)")]
-    DASH["pixi run smart-app (browser dashboard)"] -->|"no login"| CERN
-    DASH -->|"no login"| HAPI
-    DASH -.->|"optional SMART sign-in"| CERNS[(Cerner secured sandbox)]
-    DASH -->|"local proxy, backend JWT"| EPIC
-```
-
-## Supported EHR backends
-
-| `EHR_TYPE` | Status | Auth |
-|---|---|---|
-| `epic` | Full | JWT client credentials (RS384) |
-| `cerner` | Full (open sandbox) | None |
-| `hapi` | Full | None (local dev) |
-
-## Available commands
-
-```bash
-pixi run patient [name]            # keys depend on EHR_TYPE (or --ehr epic|cerner|hapi)
-pixi run observations [name] [--category vital-signs] [--count 10] [--ehr epic|cerner|hapi]
-pixi run list-patients
-pixi run list-ehrs
-pixi run generate-keys
-pixi run smart-app        # patient dashboard on localhost: --ehr cerner | epic | hapi
-pixi run smart-setup      # optional: register a signed-in Cerner SMART session
-pixi run hapi-up          # local HAPI server in Docker (then: pixi run hapi-load)
-pixi run codex-setup      # configure OpenAI Codex with your token
-```
-
-See [Setup → Prerequisites](setup/prerequisites.md) to get started, or [EHR Clients](ehr-clients.md) for the architecture.
-
+Connecting to Epic or Cerner? See [Advanced](advanced.md).

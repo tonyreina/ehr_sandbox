@@ -1,6 +1,6 @@
 # Oracle Health (Cerner) Account & App Registration
 
-You only need this for the **signed-in SMART on FHIR mode** of the [patient dashboard](../demos/smart-app.md). The Python demos (`EHR_TYPE=cerner`) and the dashboard's default mode use the [open sandbox](cerner-sandbox.md), which needs no account.
+You only need this for the **signed-in SMART on FHIR mode** of the [patient dashboard](../demos/smart-app-internals.md). The Python demos (`EHR_TYPE=cerner`) and the dashboard's default mode use the [open sandbox](cerner-sandbox.md), which needs no account.
 
 ```mermaid
 flowchart LR
