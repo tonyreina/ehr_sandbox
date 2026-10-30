@@ -16,7 +16,7 @@ The terminal line **Ask box: ready** confirms your token was found. If it says i
 
 ## How the Ask box works
 
-Scroll to **Ask about this patient** at the bottom of the chart (or click **Ask AI** on the left). When you press **Ask**:
+Open the **Ask AI** tab next to **Chart**, just below the patient banner. The AI reads the same chart you see on the **Chart** tab, so pick the patient first. When you press **Ask**:
 
 1. The page copies the text of the chart panels you can see.
 2. It sends that text and your question to the AI through the course proxy, together with standing instructions: answer only from the chart, say "Not documented in this chart" if unsure, and name the section each fact comes from.
