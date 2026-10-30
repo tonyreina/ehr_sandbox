@@ -203,7 +203,24 @@ function setupTabs() {
   });
 }
 
+// Chips under the answer: which model answered and what the question cost.
+function showAskMeta(d) {
+  const count = n => (typeof n === "number" ? n.toLocaleString() : "n/a");
+  const cost = d.cost_usd == null ? "n/a"
+    : (d.cost_estimated ? "≈ " : "") + (d.cost_usd > 0 && d.cost_usd < 0.0001 ? "< $0.0001" : `$${d.cost_usd.toFixed(4)}`);
+  const chips = [["Model", d.model || "n/a"], ["Cost", cost], ["Input tokens", count(d.input_tokens)],
+                 ["Output tokens", count(d.output_tokens)]];
+  const box = $("ask-meta");
+  box.replaceChildren(...chips.map(([label, value]) => {
+    const chip = el("span", `${label}: ${value}`, "chip");
+    if (label === "Cost" && d.cost_estimated) chip.title = "Estimated from published per-token prices; the course proxy may bill differently.";
+    return chip;
+  }));
+  box.hidden = false;
+}
+
 function clearAsk() {
+  $("ask-meta").hidden = true;
   $("ask-answer").hidden = true;
   $("ask-status").textContent = "";
   $("ask-chart").textContent = "";
@@ -231,6 +248,7 @@ function setupAsk() {
     showAiSees(chart, question);
     btn.disabled = true;
     $("ask-answer").hidden = true;
+    $("ask-meta").hidden = true;
     status.className = "muted";
     status.textContent = "Thinking…";
     try {
@@ -241,6 +259,7 @@ function setupAsk() {
       if (!r.ok) throw new Error(data.error || `Request failed (${r.status}).`);
       $("ask-answer").textContent = data.answer;
       $("ask-answer").hidden = false;
+      showAskMeta(data);
       status.textContent = "";
     } catch (e) {
       status.className = "error";

@@ -171,3 +171,4 @@ td.abnormal-low { font-weight: 700; color: var(--flag-low); }
 .ask-pane { max-width: 56rem; margin: 0 auto; padding: 1rem; }
 .ask-pane[hidden], #pane-chart[hidden] { display: none; }
 .ask-system { color: var(--system); }
+.ask-meta { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .5rem; }

@@ -22,6 +22,8 @@ Open the **Ask AI** tab next to **Chart**, just below the patient banner. The AI
 2. It sends that text and your question to the AI through the course proxy, together with standing instructions: answer only from the chart, say "Not documented in this chart" if unsure, and name the section each fact comes from.
 3. The answer appears below. Open **What the AI sees** to read exactly what it was given: the **system message** (the standing instructions above, shown in green) and the **user message** (the chart text and your question).
 
+Under each answer, four chips show the **model** that answered, the **cost** of the question, and the number of **input tokens** (what you sent: the instructions, the chart and your question) and **output tokens** (what the AI wrote). A cost shown with `≈` is an estimate from published per-token prices; a cost the course proxy reports itself has no `≈`.
+
 The AI knows nothing about the patient except that text. If a fact is not on the page, it is not available to the AI.
 
 ## Writing a good question
@@ -48,6 +50,7 @@ A good question has four parts:
 
 - Which exercise would have caused harm if you had trusted the answer without checking?
 - What did the standing instructions (the system message) change? Try the same question in a general chatbot and compare. Then think about how you would reword the system message to make the AI more cautious.
+- Which of your questions cost the most, and why? Compare a short question with a long chart against a long question about a short chart. What would it cost to ask this of 1,000 patients?
 - Who should be responsible for a wrong AI answer used in care?
 
 ## Tips and troubleshooting

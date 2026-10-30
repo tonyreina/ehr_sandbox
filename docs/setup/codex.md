@@ -94,6 +94,8 @@ Result: OK - the model answered: Metformin 500 mg (**Medications**).
 
 `Result: OK` means your token works and the dashboard's Ask box will work. The token line shows only the first and last few characters; the character count and the wording of the answer will differ for you.
 
+To see the proxy's complete reply (the model name, token counts and any cost it reports), add `--raw`: `pixi run codex-check --raw`.
+
 If you see `Result: FAILED`, the message includes the reason the proxy gave. For example, `Authentication failed: token invalid` means the token is wrong or has expired: get your current token from the course, run `pixi run codex-setup <openai-token>` again, and re-run the check. For any other reason, send the line to your instructor.
 
 ## If the Codex extension still asks for a key

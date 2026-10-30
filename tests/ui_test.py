@@ -114,7 +114,9 @@ def main() -> None:
             def fake_ask(route):
                 asked.append(json.loads(route.request.post_data))
                 route.fulfill(status=200, content_type="application/json",
-                              body=json.dumps({"answer": "MOCK ANSWER: Metformin (Medications)."}))
+                              body=json.dumps({"answer": "MOCK ANSWER: Metformin (Medications).", "model": "gpt-5.3-codex",
+                                               "input_tokens": 1234, "output_tokens": 56, "cost_usd": 0.002944,
+                                               "cost_estimated": True}))
             page.route("**/api/ask", fake_ask)
 
             page.goto(f"http://localhost:{port}/index.html?ehr=hapi")
@@ -142,6 +144,10 @@ def main() -> None:
             page.click("#ask-btn")
             page.wait_for_selector("#ask-answer:not([hidden])")
             check("the mocked answer is shown", "MOCK ANSWER" in page.text_content("#ask-answer"))
+            chips = page.locator("#ask-meta .chip").all_text_contents()
+            check("chips show model, estimated cost and token counts",
+                  chips == ["Model: gpt-5.3-codex", "Cost: ≈ $0.0029", "Input tokens: 1,234", "Output tokens: 56"])
+            check("the cost chip explains it is an estimate", "Estimated" in (page.get_attribute("#ask-meta .chip >> nth=1", "title") or ""))
             check("the request carried the chart and question", len(asked) == 1 and "Metformin" in asked[0]["chart"] and "Summarize" in asked[0]["question"])
 
             page.click("#sec-ask details summary")
@@ -169,6 +175,7 @@ def main() -> None:
             page.select_option("#patient-select", "scn-alex")
             page.wait_for_function("() => document.querySelector('#name').textContent.includes('Rivera')", timeout=30000)
             check("changing patient keeps the tab and clears the old answer", sel() == ["false", "true"] and page.is_hidden("#ask-answer"))
+            check("changing patient hides the old chips", page.is_hidden("#ask-meta"))
             check("changing patient closes What the AI sees", not page.evaluate("document.querySelector('#sec-ask details').open"))
 
             page.wait_for_function("() => !/Loading/.test(document.getElementById('allergies').innerText)", timeout=30000)
