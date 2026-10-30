@@ -21,7 +21,34 @@ pixi run hapi-load      # generates 25 Synthea patients and loads them (about 2 
 | `--seed`, `-s` | `42` | Random seed; the same seed gives the same patients |
 | `--state` | `Massachusetts` | US state to simulate |
 | `--plain-names` / `--numbered-names` | plain | Synthea's own names carry random digits to look obviously fake (`Erin498 Sulema841 McClure239`); plain names (`Erin Sulema McClure`) are the default. Plain names are synthetic but could match real people. |
+| `--condition`, `-c` | none | Keep only patients with a condition whose name contains this text (case-insensitive), e.g. `"diabetes mellitus type 2"`. See [Cohorts](#cohorts) |
+| `--age` | any | Age range in years, e.g. `65-90` |
+| `--gender` | any | `M` or `F` |
 | `--force` | off | Load even when the server already has patients (adds more) |
+
+### Cohorts
+
+Synthea cannot guarantee a disease, so `--condition` generates patients in batches and keeps only those whose record has a matching condition. It can take a few minutes, and it stops with an error if it cannot find enough matches (check the spelling or widen `--age`). The text matches condition names, so `diabetes` also matches *prediabetes*; use the full name for a precise cohort.
+
+```bash
+pixi run hapi-load -p 15 --force -c "diabetes mellitus type 2" --age 50-85
+pixi run hapi-load -p 10 --force -c "chronic congestive heart failure" --age 60-90
+```
+
+| Cohort | `--condition` | Suggested options |
+|---|---|---|
+| Type 2 diabetes | `diabetes mellitus type 2` | `--age 50-85` |
+| Heart failure | `chronic congestive heart failure` | `--age 60-90` |
+| Kidney disease | `chronic kidney disease` | `--age 55-90` |
+| Sepsis | `sepsis` | |
+| Dementia | `alzheimer` | `--age 65-95` |
+| Cancer | `malignant neoplasm` | `--age 45-90` |
+| Asthma | `asthma` | |
+| Pregnancy | `normal pregnancy` | `--gender F --age 18-40` |
+| Older adults | | `--age 75-95` |
+| Children | | `--age 0-17` |
+
+Condition names come from Synthea, so check what a cohort contains with `pixi run list-patients --ehr hapi` and the dashboard. `--force` is needed when the server already has patients.
 
 Patients are stored in a Docker volume, so they survive restarts. To stop the server or start over:
 
