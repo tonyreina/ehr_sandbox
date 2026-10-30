@@ -21,13 +21,13 @@ No account is needed for the default Cerner open sandbox.
 
 ## Set up OpenAI Codex (course users)
 
-Point Codex at the course proxy and store your **OpenAI Token** (works in Windows PowerShell, macOS, Ubuntu and WSL):
+Point Codex at the course proxy and store your **OpenAI Token** from the VS Code terminal (**Terminal > New Terminal**; works on Windows, macOS, Ubuntu and WSL):
 
 ```bash
 pixi run codex-setup <openai-token>
 ```
 
-Then fully quit and reopen VS Code. Omit the **OpenAI Token** to be prompted for it. Run it inside WSL if you use a WSL window in VS Code. Details: [OpenAI Codex setup](https://tonyreina.github.io/ehr_sandbox/setup/codex/).
+Then fully quit and reopen VS Code. Omit the **OpenAI Token** to be prompted for it. In a WSL window of VS Code, run it in that window's terminal. Details: [OpenAI Codex setup](https://tonyreina.github.io/ehr_sandbox/setup/codex/).
 
 ## Documentation
 
