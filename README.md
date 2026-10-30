@@ -35,5 +35,11 @@ Setup for Epic and Cerner, authentication, the dashboard, CLI reference and test
 
 To read it locally, run `pixi run docs`.
 
+## Development
 
+The browser test of the dashboard needs a developer environment that learners do not install:
 
+```bash
+pixi run -e dev install-browser   # once: downloads Chromium for Playwright
+pixi run -e dev ui-test           # drives the dashboard against a fake FHIR server, no internet or token needed
+```

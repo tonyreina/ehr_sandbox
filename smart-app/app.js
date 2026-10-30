@@ -159,6 +159,13 @@ const ASK_EXAMPLES = ["Summarize this patient in 3 sentences.", "List the allerg
   "What changed recently in the labs?", "Is anything missing or overdue?"];
 
 function chartText() {
+  // innerText drops table layout for hidden elements, so show the chart while reading it.
+  const pane = $("pane-chart"), wasHidden = pane.hidden;
+  pane.hidden = false;
+  try { return readChart(); } finally { pane.hidden = wasHidden; }
+}
+
+function readChart() {
   const out = [`Patient: ${$("name").textContent}`, $("demographics").textContent];
   for (const [title, id] of ASK_SECTIONS) {
     out.push(`\n== ${title} ==`, ($(id).innerText || "").trim() || "(nothing shown)");
@@ -172,10 +179,33 @@ function aiSees(chart, question) {
   return prompt ? promptText(prompt, chart, question || "(type your question above)") : chart;
 }
 
+function selectTab(name) {
+  for (const t of ["chart", "ask"]) {
+    const on = t === name;
+    $(`tab-${t}`).setAttribute("aria-selected", String(on));
+    $(`tab-${t}`).tabIndex = on ? 0 : -1;
+    $(`pane-${t}`).hidden = !on;
+  }
+}
+
+function setupTabs() {
+  const tabs = [$("tab-chart"), $("tab-ask")];
+  tabs.forEach((tab, i) => {
+    tab.addEventListener("click", () => selectTab(i ? "ask" : "chart"));
+    tab.addEventListener("keydown", e => {
+      if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+      const next = (i + (e.key === "ArrowRight" ? 1 : tabs.length - 1)) % tabs.length;
+      selectTab(next ? "ask" : "chart");
+      tabs[next].focus();
+    });
+  });
+}
+
 function clearAsk() {
   $("ask-answer").hidden = true;
   $("ask-status").textContent = "";
   $("ask-chart").textContent = "";
+  $("ask-chart").closest("details").open = false;     // it would be empty or stale for the new patient
 }
 
 function setupAsk() {
@@ -259,9 +289,9 @@ async function loadPatient(client, patientId) {
         ["Medication", "Dose", "Status"], "No medications on file.", "medications")),
     section(token, "allergies", () => bundle(client, `AllergyIntolerance?patient=${pid}&_count=50`), rs => {
       const as = allergies(rs);
-      setChip("chip-allergies", as.length ? `Allergies (${as.length})` : "No known allergies");
+      setChip("chip-allergies", as.length ? `Allergies (${as.length})` : "No allergies documented");
       renderList("allergies", as.map(a => [a.name, a.reactions, badge(a.criticality)]),
-        ["Allergen", "Reactions", "Criticality"], "No known allergies on file.", "allergies");
+        ["Allergen", "Reactions", "Criticality"], "None documented. A patient may still have allergies that were never recorded.", "allergies");
     }, () => setChip("chip-allergies", "Allergies: unavailable")),
     section(token, "encounters", () => bundle(client, `Encounter?patient=${pid}&_count=20`), rs => {
       const es = encounters(rs);
@@ -421,6 +451,7 @@ function requireSignIn(note) {
 }
 
 (async function main() {
+  setupTabs();
   setupAsk();
   const q = new URLSearchParams(window.location.search);
   const returning = q.has("code") || q.has("error") || !!store.get("SMART_KEY");
