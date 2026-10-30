@@ -37,6 +37,16 @@ pixi install
 
 This installs all conda-forge packages **and** the `ehr` package itself as an editable install (via `pyproject.toml`), so changes to `ehr/` take effect immediately without reinstalling.
 
+## OpenAI Codex (course learners)
+
+After `pixi install`, configure Codex with your learner key:
+
+```bash
+pixi run codex-setup <learner-api-key>
+```
+
+Then fully quit and reopen VS Code. See [OpenAI Codex](codex.md) for what it changes, verification, and WSL notes.
+
 ## Python packages
 
 | Package | Purpose |
