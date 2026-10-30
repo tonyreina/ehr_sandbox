@@ -2,7 +2,7 @@
 
 Python demos for querying FHIR R4 servers: Epic (backend system OAuth 2.0 client credentials) and the Oracle Health (Cerner) open sandbox (no auth).
 
-The project is built around a multi-EHR abstraction layer — swap `EHR_TYPE` in `.env` to target a different server without changing any code.
+The project is built around a multi-EHR abstraction layer â€” swap `EHR_TYPE` in `.env` to target a different server without changing any code.
 
 Based on [FHIR Practical Interoperability](https://www.doctorswhocode.blog/blog/fhir-practical-interoperability/).
 
@@ -43,7 +43,8 @@ pixi run generate-keys
 pixi run smart-app        # patient dashboard on localhost: --ehr cerner | epic | hapi
 pixi run smart-setup      # optional: register a signed-in Cerner SMART session
 pixi run hapi-up          # local HAPI server in Docker (then: pixi run hapi-load)
-pixi run codex-setup      # configure OpenAI Codex with your learner key
+pixi run codex-setup      # configure OpenAI Codex with your token
 ```
 
-See [Setup → Prerequisites](setup/prerequisites.md) to get started, or [EHR Clients](ehr-clients.md) for the architecture.
+See [Setup â†’ Prerequisites](setup/prerequisites.md) to get started, or [EHR Clients](ehr-clients.md) for the architecture.
+

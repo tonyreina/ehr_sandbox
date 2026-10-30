@@ -89,7 +89,7 @@ pixi run list-ehrs
 ```
 
 ```
-  epic ← active
+  epic ÃƒÂ¢Ã¢â‚¬Â Ã‚Â active
   cerner
   hapi
 ```
@@ -168,19 +168,19 @@ The script also lives at `keys/generate_keys.py` and can be run directly:
 python keys/generate_keys.py [--force]
 ```
 
-See [Setup → Keys](setup/keys.md) for next steps after generation.
+See [Setup ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ Keys](setup/keys.md) for next steps after generation.
 
 ---
 
 ## codex-setup
 
-Point OpenAI Codex at the Great Learning proxy and store your learner key (Windows, macOS, Linux, WSL).
+Point OpenAI Codex at the course proxy and store your **OpenAI Token** (Windows, macOS, Linux, WSL).
 
 ```bash
-pixi run codex-setup [<learner-api-key>]
+pixi run codex-setup [<openai-token>]
 ```
 
-Omit the key to be prompted for it (input hidden). See [OpenAI Codex](setup/codex.md).
+Omit the **OpenAI Token** to be prompted for it (input hidden). The command validates common mistakes and prints a quick verification check. See [OpenAI Codex](setup/codex.md).
 
 ---
 
@@ -193,3 +193,6 @@ pixi run docs
 ```
 
 Opens at `http://localhost:8000`.
+
+
+
