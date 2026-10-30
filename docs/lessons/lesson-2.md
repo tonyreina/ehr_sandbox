@@ -18,7 +18,7 @@ The terminal line **Ask box: ready** confirms your token was found. If it says i
 
 Open the **Ask AI** tab next to **Chart**, just below the patient banner. The AI reads the same chart you see on the **Chart** tab, so pick the patient first. When you press **Ask**:
 
-1. The page copies the text of the chart panels you can see.
+1. The page builds a text copy of the chart. Lists are given in full (up to 50 rows each, even though the screen shows 10), every lab comes with its recent history so the AI can see trends, and an empty list reads "None documented."
 2. It sends that text and your question to the AI through the course proxy, together with standing instructions: answer only from the chart, say "Not documented in this chart" if unsure, and name the section each fact comes from.
 3. The answer appears below. Open **What the AI sees** to read exactly what it was given: the **system message** (the standing instructions above, shown in green) and the **user message** (the chart text and your question).
 
