@@ -89,7 +89,7 @@ pixi run list-ehrs
 ```
 
 ```
-  epic ÃƒÂ¢Ã¢â‚¬Â Ã‚Â active
+  epic ← active
   cerner
   hapi
 ```
@@ -168,7 +168,7 @@ The script also lives at `keys/generate_keys.py` and can be run directly:
 python keys/generate_keys.py [--force]
 ```
 
-See [Setup ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ Keys](setup/keys.md) for next steps after generation.
+See [Setup → Keys](setup/keys.md) for next steps after generation.
 
 ---
 
