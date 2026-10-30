@@ -25,7 +25,7 @@ Point Codex at the course proxy and store your **OpenAI Token** from the VS Code
 pixi run codex-setup <openai-token>
 ```
 
-Then fully quit and reopen VS Code. Omit the **OpenAI Token** to be prompted for it. In a WSL window of VS Code, run it in that window's terminal. Details: [OpenAI Codex setup](https://tonyreina.github.io/ehr_sandbox/setup/codex/).
+Then fully quit and reopen VS Code, and confirm the token works with `pixi run codex-check` (it should end with `Result: OK`). Omit the **OpenAI Token** to be prompted for it. In a WSL window of VS Code, run it in that window's terminal. Details: [OpenAI Codex setup](https://tonyreina.github.io/ehr_sandbox/setup/codex/).
 
 ## Documentation
 

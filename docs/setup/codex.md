@@ -75,6 +75,27 @@ You should see:
 
 If you do not see your **OpenAI Token**, fully close VS Code, reopen it, and run the check again.
 
+## Check the connection
+
+After setup, test your token against the course proxy. Run this in the VS Code terminal:
+
+```bash
+pixi run codex-check
+```
+
+It prints the proxy address, the model, a masked copy of your token and where it was found, then sends one tiny test question. You should see something like this:
+
+```text
+Proxy:  https://aibe.mygreatlearning.com/openai/v1
+Model:  gpt-5.3-codex
+Token:  gl-U2F...WQWh (67 characters, from the environment)
+Result: OK - the model answered: Metformin 500 mg (**Medications**).
+```
+
+`Result: OK` means your token works and the dashboard's Ask box will work. The token line shows only the first and last few characters; the character count and the wording of the answer will differ for you.
+
+If you see `Result: FAILED`, the message includes the reason the proxy gave. For example, `Authentication failed: token invalid` means the token is wrong or has expired: get your current token from the course, run `pixi run codex-setup <openai-token>` again, and re-run the check. For any other reason, send the line to your instructor.
+
 ## If the Codex extension still asks for a key
 
 On macOS the registration with the Dock lasts only until you restart your Mac, and on Ubuntu a VS Code started from the app launcher does not read `~/.bashrc`. In both cases, fully quit VS Code and start it from a terminal instead:

@@ -20,6 +20,7 @@ hapi-down          = "python cli.py hapi-down"
 hapi-load          = "python cli.py hapi-load"
 hapi-scenarios     = "python cli.py hapi-scenarios"
 codex-setup        = "python cli.py codex-setup"
+codex-check        = "python cli.py codex-check"
 
 [dependencies]
 python = ">=3.15.0,<3.16"

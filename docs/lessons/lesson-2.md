@@ -56,5 +56,6 @@ A good question has four parts:
 |---|---|
 | "No OPENAI_TOKEN found" | Run `pixi run codex-setup`, then stop the dashboard (Ctrl + C) and start `smart-app` again. |
 | "rejected your token" | Check the token, then run `pixi run codex-setup` again. |
+| "The course proxy refused the request" | Run `pixi run codex-check` and read the message after `FAILED`. A rejected token needs `pixi run codex-setup` with a correct token; other reasons go to your instructor. |
 | A "No token found yet" note under the Ask box | The token was not found when `smart-app` started. Same fix as above. |
 | The answer ignores a panel | Wait until the panels finish loading, then ask again. Check **What the AI sees**. |
