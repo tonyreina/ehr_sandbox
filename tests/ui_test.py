@@ -172,9 +172,30 @@ def main() -> None:
             page.keyboard.press("ArrowRight")
             check("ArrowRight moves back to Ask AI", sel() == ["false", "true"])
 
+            # --- what the AI is given is fuller than what the screen shows ---
+            page.evaluate("""() => renderList("meds", Array.from({length: 12}, (_, i) => [`Med${String(i + 1).padStart(2, "0")}x`, "1 tab", "active"]),
+                                              ["Medication", "Dose", "Status"], "No medications on file.", "medications")""")
+            shown, ai = page.inner_text("#meds"), page.evaluate("chartText()")
+            check("the screen still cuts long lists at 10 rows", "Med10x" in shown and "Med11x" not in shown and "and 2 more" in shown)
+            check("the AI gets all 12 medications", all(f"Med{i:02d}x\t" in ai for i in range(1, 13)) and "and 2 more" not in ai)
+            page.evaluate("""() => renderList("meds", Array.from({length: 60}, (_, i) => [`Med${String(i + 1).padStart(2, "0")}x`, "", ""]),
+                                              ["Medication", "Dose", "Status"], "", "medications")""")
+            ai = page.evaluate("chartText()")
+            check("very long lists are capped for the AI, and it is told", "Med50x\t" in ai and "Med51x\t" not in ai and "[showing 50 of 60 medications]" in ai)
+
+            page.select_option("#patient-select", "scn-robert")
+            page.wait_for_function("() => document.querySelector('#name').textContent.includes('Kline') && !/Loading/.test(document.getElementById('labs').innerText)", timeout=30000)
+            ai = page.evaluate("chartText()")
+            creat = next((l for l in ai.split("\n") if l.startswith("Creatinine")), "")
+            check("the AI gets each lab's history, not just the latest value", creat.count(";") == 4 and ": 1;" in creat and ": 2.6" in creat)
+
             page.select_option("#patient-select", "scn-alex")
             page.wait_for_function("() => document.querySelector('#name').textContent.includes('Rivera')", timeout=30000)
             check("changing patient keeps the tab and clears the old answer", sel() == ["false", "true"] and page.is_hidden("#ask-answer"))
+            alex = page.evaluate("chartText()")
+            check("an empty allergy list reads 'None documented.' to the AI, without the on-screen help text",
+                  "== Allergies ==\nNone documented." in alex and "never recorded" not in alex)
+            check("empty medications read 'None documented.' to the AI, not 'on file'", "== Medications ==\nNone documented." in alex and "on file" not in alex)
             check("changing patient hides the old chips", page.is_hidden("#ask-meta"))
             check("changing patient closes What the AI sees", not page.evaluate("document.querySelector('#sec-ask details').open"))
 

@@ -87,6 +87,10 @@ function renderCharts(charts) {
 function renderLabs(observations) {
   const groups = groupLabs(observations);
   const box = $("labs"); box.replaceChildren();
+  box.dataset.aiText = tableText(
+    ["Test", "Latest", "Flag", "Ref range", "Latest date", `History (last ${AI_HISTORY}: date value)`],
+    groups.map(g => [g.name, `${g.latest.v} ${g.unit}`, g.latest.flag || "", g.latest.range || "", g.latest.date,
+                     g.points.slice(-AI_HISTORY).map(p => `${p.date}: ${p.v}`).join("; ")]), "tests");
   if (!groups.length) return box.append(el("p", "No numeric lab results.", "muted"));
   const flagged = groups.filter(g => g.latest.flag);
   box.append(simpleTable(
@@ -105,6 +109,8 @@ function renderLabs(observations) {
 function renderFlowsheet(charts) {
   const { days, rows } = buildFlowsheet(charts);
   const box = $("flowsheet"); box.replaceChildren();
+  const full = buildFlowsheet(charts, 30);                    // the AI sees up to 30 days, newest first
+  box.dataset.aiText = tableText(["Vital", ...full.days], full.rows.map(r => [`${r.label} (${r.unit})`, ...r.cells]), "vitals");
   if (!rows.length) return box.append(el("p", "No vital-sign readings.", "muted"));
   const wrap = simpleTable(["Vital", ...days], rows.map(r => [`${r.label} (${r.unit})`, ...r.cells]));
   wrap.querySelector("table").classList.add("flowsheet");
@@ -114,9 +120,25 @@ function renderFlowsheet(charts) {
 function setChip(id, text) { $(id).textContent = text; }
 
 const MAX_ROWS = 10;
-function renderList(id, rows, headers, empty, noun) {
+const AI_MAX_ROWS = 50;      // the AI gets longer lists than the screen shows (cost grows with size)
+const AI_HISTORY = 12;       // lab results per test given to the AI
+
+// A table as plain tab-separated text for the AI: every row up to AI_MAX_ROWS, and a note if cut.
+function tableText(headers, rows, noun) {
+  if (!rows.length) return "None documented.";
+  const cell = c => (c instanceof Node ? c.textContent : String(c ?? "")).trim();
+  const lines = [headers.join("\t"), ...rows.slice(0, AI_MAX_ROWS).map(r => r.map(cell).join("\t"))];
+  if (rows.length > AI_MAX_ROWS) lines.push(`[showing ${AI_MAX_ROWS} of ${rows.length} ${noun}]`);
+  return lines.join("\n");
+}
+function renderList(id, rows, headers, empty, noun, hint) {
   const box = $(id); box.replaceChildren();
-  if (!rows.length) return box.append(el("p", empty, "muted"));
+  box.dataset.aiText = tableText(headers, rows, noun);       // what the AI reads: not cut to MAX_ROWS
+  if (!rows.length) {
+    box.append(el("p", empty, "muted"));
+    if (hint) box.append(el("p", hint, "muted"));            // help for people; the AI reads aiText instead
+    return;
+  }
   box.append(simpleTable(headers, rows.slice(0, MAX_ROWS)));
   if (rows.length > MAX_ROWS) box.append(el("p", `…and ${rows.length - MAX_ROWS} more ${noun}.`, "muted"));
 }
@@ -168,7 +190,7 @@ function chartText() {
 function readChart() {
   const out = [`Patient: ${$("name").textContent}`, $("demographics").textContent];
   for (const [title, id] of ASK_SECTIONS) {
-    out.push(`\n== ${title} ==`, ($(id).innerText || "").trim() || "(nothing shown)");
+    out.push(`\n== ${title} ==`, ($(id).dataset.aiText || $(id).innerText || "").trim() || "(nothing shown)");
   }
   return out.join("\n");
 }
@@ -220,6 +242,7 @@ function showAskMeta(d) {
 }
 
 function clearAsk() {
+  for (const [, id] of ASK_SECTIONS) delete $(id).dataset.aiText;   // never carry the last patient's lists over
   $("ask-meta").hidden = true;
   $("ask-answer").hidden = true;
   $("ask-status").textContent = "";
@@ -312,7 +335,8 @@ async function loadPatient(client, patientId) {
       const as = allergies(rs);
       setChip("chip-allergies", as.length ? `Allergies (${as.length})` : "No allergies documented");
       renderList("allergies", as.map(a => [a.name, a.reactions, badge(a.criticality)]),
-        ["Allergen", "Reactions", "Criticality"], "None documented. A patient may still have allergies that were never recorded.", "allergies");
+        ["Allergen", "Reactions", "Criticality"], "None documented.", "allergies",
+        "A patient may still have allergies that were never recorded.");
     }, () => setChip("chip-allergies", "Allergies: unavailable")),
     section(token, "encounters", () => bundle(client, `Encounter?patient=${pid}&_count=20`), rs => {
       const es = encounters(rs);
