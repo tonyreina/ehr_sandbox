@@ -77,13 +77,24 @@ If you do not see your **OpenAI Token**, fully close VS Code, reopen it, and run
 
 ## Check the connection
 
-To test your token against the course proxy, run this in the VS Code terminal:
+After setup, test your token against the course proxy. Run this in the VS Code terminal:
 
 ```bash
 pixi run codex-check
 ```
 
-It prints the proxy address, the model, a masked copy of your token and where it was found, then sends one tiny test question. `Result: OK` means the dashboard's Ask box will work. If it says `FAILED`, the message includes the reason the proxy gave (for example a rejected token or a model you are not allowed to use); send that line to your instructor.
+It prints the proxy address, the model, a masked copy of your token and where it was found, then sends one tiny test question. You should see something like this:
+
+```text
+Proxy:  https://aibe.mygreatlearning.com/openai/v1
+Model:  gpt-5.3-codex
+Token:  gl-U2F...WQWh (67 characters, from the environment)
+Result: OK - the model answered: Metformin 500 mg (**Medications**).
+```
+
+`Result: OK` means your token works and the dashboard's Ask box will work. The token line shows only the first and last few characters; the character count and the wording of the answer will differ for you.
+
+If you see `Result: FAILED`, the message includes the reason the proxy gave. For example, `Authentication failed: token invalid` means the token is wrong or has expired: get your current token from the course, run `pixi run codex-setup <openai-token>` again, and re-run the check. For any other reason, send the line to your instructor.
 
 ## If the Codex extension still asks for a key
 
