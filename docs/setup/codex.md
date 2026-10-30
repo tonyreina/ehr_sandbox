@@ -75,6 +75,16 @@ You should see:
 
 If you do not see your **OpenAI Token**, fully close VS Code, reopen it, and run the check again.
 
+## Check the connection
+
+To test your token against the course proxy, run this in the VS Code terminal:
+
+```bash
+pixi run codex-check
+```
+
+It prints the proxy address, the model, a masked copy of your token and where it was found, then sends one tiny test question. `Result: OK` means the dashboard's Ask box will work. If it says `FAILED`, the message includes the reason the proxy gave (for example a rejected token or a model you are not allowed to use); send that line to your instructor.
+
 ## If the Codex extension still asks for a key
 
 On macOS the registration with the Dock lasts only until you restart your Mac, and on Ubuntu a VS Code started from the app launcher does not read `~/.bashrc`. In both cases, fully quit VS Code and start it from a terminal instead:

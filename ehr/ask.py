@@ -42,6 +42,17 @@ def _output_text(data: dict) -> str:
     return "".join(parts)
 
 
+def _error_detail(r: requests.Response, key: str) -> str:
+    """The proxy's own error message, short and with the token removed: ': <message>' or ''."""
+    try:
+        err = r.json().get("error")
+        msg = err.get("message") if isinstance(err, dict) else err
+    except (ValueError, AttributeError):
+        msg = r.text
+    msg = " ".join(str(msg or "").split()).replace(key, "[token]")[:200]
+    return f": {msg}" if msg else ""
+
+
 def ask(chart: str, question: str, base_url: str = codex.PROXY_URL) -> str:
     key = token()
     if not key:
@@ -60,10 +71,12 @@ def ask(chart: str, question: str, base_url: str = codex.PROXY_URL) -> str:
                           headers={"Authorization": f"Bearer {key}"})
     except requests.RequestException as e:
         raise AskError(f"Could not reach the course proxy ({type(e).__name__}). Check your connection.")
-    if r.status_code in (401, 403):
-        raise AskError("The course proxy rejected your token. Check it, then run `pixi run codex-setup` again.")
     if not r.ok:
-        raise AskError(f"The course proxy returned an error ({r.status_code}).")
+        detail = _error_detail(r, key)
+        if r.status_code in (401, 403):
+            raise AskError(f"The course proxy refused the request ({r.status_code}){detail}. Check your token, "
+                           "then run `pixi run codex-setup` again, or run `pixi run codex-check`.")
+        raise AskError(f"The course proxy returned an error ({r.status_code}){detail}.")
     try:
         text = _output_text(r.json()).strip()
     except ValueError:

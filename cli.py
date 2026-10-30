@@ -566,6 +566,26 @@ def _mask_codex_key(value: str) -> str:
     return f"{value[:6]}...{value[-4:]}"
 
 
+@app.command("codex-check")
+def codex_check():
+    """Send one tiny test question to the course proxy and show exactly what comes back."""
+    from ehr import ask as ask_mod
+    from ehr import codex
+    key = ask_mod.token()
+    typer.echo(f"Proxy:  {codex.PROXY_URL}\nModel:  {codex.DEFAULT_MODEL}")
+    if not key:
+        typer.echo(f"Token:  not found. Run `pixi run codex-setup` first.", err=True)
+        raise typer.Exit(1)
+    source = "environment" if os.getenv(codex.ENV_VAR) else "saved by codex-setup"
+    typer.echo(f"Token:  {_mask_codex_key(key)} ({len(key)} characters, from the {source})")
+    try:
+        answer = ask_mod.ask("Patient: Test Patient\n== Medications ==\nMetformin 500 mg", "Which medication is listed? Answer in a few words.")
+    except ask_mod.AskError as e:
+        typer.echo(f"Result: FAILED - {e}", err=True)
+        raise typer.Exit(1)
+    typer.echo(f"Result: OK - the model answered: {answer}")
+
+
 @app.command("codex-setup")
 def codex_setup(
     key: Annotated[Optional[str], typer.Argument(help="OpenAI Token (prompted, hidden, if omitted)")] = None,
