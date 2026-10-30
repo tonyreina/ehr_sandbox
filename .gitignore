@@ -21,3 +21,6 @@ smart-app/config.local.js
 
 # Synthea jar and generated patients (pixi run hapi-load)
 data/
+
+# Lesson drafts stay local (the learner handout lives in the Docs artifact)
+docs/lessons/
