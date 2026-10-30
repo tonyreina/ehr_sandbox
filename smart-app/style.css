@@ -148,3 +148,16 @@ td.num { font-variant-numeric: tabular-nums; white-space: nowrap; }
 td.abnormal { font-weight: 700; color: var(--flag-high); }
 td.abnormal-low { font-weight: 700; color: var(--flag-low); }
 .loading { opacity: .6; }
+
+/* ---- ask the AI ---- */
+.ask-examples { display: flex; flex-wrap: wrap; gap: .4rem; margin-bottom: .5rem; }
+.ask-examples button { font: inherit; font-size: .8rem; padding: .2rem .55rem; border: 1px solid var(--border);
+                       border-radius: 999px; background: var(--card); color: inherit; cursor: pointer; }
+#ask-q { width: 100%; box-sizing: border-box; font: inherit; padding: .4rem .5rem; border: 1px solid var(--border);
+         border-radius: 4px; background: var(--card); color: inherit; resize: vertical; }
+#ask-btn { margin-top: .4rem; padding: .35rem 1rem; border: 0; border-radius: 4px; cursor: pointer;
+           background: var(--banner-edge); color: #fff; font: inherit; }
+#ask-btn:disabled { opacity: .55; cursor: not-allowed; }
+.ask-answer, .ask-chart { white-space: pre-wrap; word-break: break-word; font: inherit; margin: .5rem 0 0;
+                          padding: .6rem .7rem; border: 1px solid var(--border); border-radius: 4px; background: var(--surface); }
+.ask-chart { font-size: .78rem; max-height: 18rem; overflow: auto; }

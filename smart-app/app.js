@@ -152,7 +152,68 @@ async function section(token, id, load, render, onFail) {
   }
 }
 
+// ---- Ask AI: the model sees the same text as the learner (the panels on this page) ----
+const ASK_SECTIONS = [["Latest vitals", "tiles"], ["Flowsheet", "flowsheet"], ["Results", "labs"],
+  ["Medications", "meds"], ["Allergies", "allergies"], ["Encounters", "encounters"], ["Problem list", "conditions"]];
+const ASK_EXAMPLES = ["Summarize this patient in 3 sentences.", "List the allergies and current medications.",
+  "What changed recently in the labs?", "Is anything missing or overdue?"];
+
+function chartText() {
+  const out = [`Patient: ${$("name").textContent}`, $("demographics").textContent];
+  for (const [title, id] of ASK_SECTIONS) {
+    out.push(`\n== ${title} ==`, ($(id).innerText || "").trim() || "(nothing shown)");
+  }
+  return out.join("\n");
+}
+
+function clearAsk() {
+  $("ask-answer").hidden = true;
+  $("ask-status").textContent = "";
+  $("ask-chart").textContent = "";
+}
+
+function setupAsk() {
+  const q = $("ask-q"), btn = $("ask-btn"), status = $("ask-status");
+  for (const text of ASK_EXAMPLES) {
+    const b = el("button", text);
+    b.type = "button";
+    b.addEventListener("click", () => { q.value = text; q.focus(); });
+    $("ask-examples").append(b);
+  }
+  if (!window.SMART_ASK) {
+    btn.disabled = true;
+    status.textContent = "Not set up yet: run `pixi run codex-setup` with your token, restart VS Code, then start the dashboard again.";
+  }
+  $("ask-chart").closest("details").addEventListener("toggle", () => { $("ask-chart").textContent = chartText(); });
+  btn.addEventListener("click", async () => {
+    const question = q.value.trim();
+    if (!question) { status.textContent = "Type a question first."; return; }
+    const chart = chartText();
+    $("ask-chart").textContent = chart;
+    btn.disabled = true;
+    $("ask-answer").hidden = true;
+    status.className = "muted";
+    status.textContent = "Thinking…";
+    try {
+      const r = await fetch("/api/ask", { method: "POST",
+        headers: { "Content-Type": "application/json", "X-Ask": "1" },
+        body: JSON.stringify({ chart, question }) });
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(data.error || `Request failed (${r.status}).`);
+      $("ask-answer").textContent = data.answer;
+      $("ask-answer").hidden = false;
+      status.textContent = "";
+    } catch (e) {
+      status.className = "error";
+      status.textContent = e.message;
+    } finally {
+      btn.disabled = false;
+    }
+  });
+}
+
 async function loadPatient(client, patientId) {
+  clearAsk();
   const token = ++current;
   $("status").className = "muted";
   $("status").textContent = `Loading patient ${patientId}…`;
@@ -353,6 +414,7 @@ function requireSignIn(note) {
 }
 
 (async function main() {
+  setupAsk();
   const q = new URLSearchParams(window.location.search);
   const returning = q.has("code") || q.has("error") || !!store.get("SMART_KEY");
   profileKey = chooseProfile(cfg, { ehrParam: q.get("ehr"), saved: returning ? store.get("smart_ehr") : null, def: window.SMART_DEFAULT_EHR });

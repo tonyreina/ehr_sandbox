@@ -121,3 +121,7 @@ The app requests `Patient` and `Observation` by default (`resources` in the prof
 - Cerner access tokens last about 10 minutes; launch again when they expire. The Epic proxy refreshes its token by itself.
 - Client ids are identifiers, not secrets. The Cerner app is a public client with no secret; the Epic private key stays in the `smart-app` Python process and never reaches the browser.
 - Verified against the live sandboxes: Cerner open mode, HAPI, and Epic through the proxy. The Cerner sign-in itself needs your own code Console registration.
+
+## Ask about this patient
+
+The last panel lets you ask an AI a question about the patient on screen. It sends the text of the chart panels and your question to the course proxy using your `OPENAI_TOKEN` (see [OpenAI Codex](../setup/codex.md)); the token stays in the local server and never reaches the browser. Open **What the AI sees** to read exactly what is sent. Use synthetic patients only. See [Lesson 2](../lessons/lesson-2.md).
