@@ -472,7 +472,8 @@ def smart_app(
                 js = (f'window.SMART_DEFAULT_EHR = "{ehr}";\n'
                       f"window.SMART_PROXY = {json.dumps({'epic': epic_ready})};\n"
                       f"window.SMART_BASES = {json.dumps(bases)};\n"
-                      f"window.SMART_ASK = {json.dumps(bool(ask_mod.token()))};\n")
+                      f"window.SMART_ASK = {json.dumps(bool(ask_mod.token()))};\n"
+                      f"window.SMART_ASK_PROMPT = {json.dumps({'instructions': ask_mod.INSTRUCTIONS, 'template': ask_mod.INPUT_TEMPLATE})};\n")
                 return self._send(200, js.encode(), "text/javascript")
             # Read-only pass-through to Epic, authenticated server-side with the backend app.
             # The private key and the token never reach the browser.

@@ -225,6 +225,12 @@ function canBrowsePatients(signedIn, scopeString) {
   return !signedIn || /(^|\s)user\//.test(scopeString || "");
 }
 
+// Exactly what the AI receives: the system message, then the user message built from the template.
+function promptText(prompt, chart, question) {
+  const user = prompt.template.replace(/\{(chart|question)\}/g, (_, k) => (k === "chart" ? chart : question));
+  return `SYSTEM MESSAGE (standing instructions)\n${prompt.instructions.trim()}\n\nUSER MESSAGE (chart and your question)\n${user}`;
+}
+
 if (typeof module !== "undefined") {
-  module.exports = { labFlag, rangeText, buildFlowsheet, initials, chooseProfile, clientIdFor, scopesFor, canBrowsePatients, patientName, ageFromBirthDate, VITALS, buildVitalChart, groupLabs, medications, allergies, encounters, conditions };
+  module.exports = { promptText, labFlag, rangeText, buildFlowsheet, initials, chooseProfile, clientIdFor, scopesFor, canBrowsePatients, patientName, ageFromBirthDate, VITALS, buildVitalChart, groupLabs, medications, allergies, encounters, conditions };
 }
