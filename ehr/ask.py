@@ -20,6 +20,8 @@ Rules:
 - Keep answers short and in plain language. You support a clinician's judgment; you do not replace it.
 """
 
+INPUT_TEMPLATE = "CHART:\n{chart}\n\nQUESTION: {question}"      # the user message; shown in the dashboard
+
 MAX_CHART = 60_000
 MAX_QUESTION = 2_000
 
@@ -66,7 +68,7 @@ def ask(chart: str, question: str, base_url: str = codex.PROXY_URL) -> str:
     if len(chart) > MAX_CHART:
         chart = chart[:MAX_CHART] + "\n[chart truncated]"
     body = {"model": codex.DEFAULT_MODEL, "instructions": INSTRUCTIONS,
-            "input": f"CHART:\n{chart}\n\nQUESTION: {question}"}
+            "input": INPUT_TEMPLATE.format(chart=chart, question=question)}
     try:
         r = requests.post(f"{base_url.rstrip('/')}/responses", json=body, timeout=120,
                           headers={"Authorization": f"Bearer {key}"})

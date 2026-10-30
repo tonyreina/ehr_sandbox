@@ -166,6 +166,12 @@ function chartText() {
   return out.join("\n");
 }
 
+// "What the AI sees": the system message plus the chart and question, as they will be sent.
+function aiSees(chart, question) {
+  const prompt = window.SMART_ASK_PROMPT;
+  return prompt ? promptText(prompt, chart, question || "(type your question above)") : chart;
+}
+
 function clearAsk() {
   $("ask-answer").hidden = true;
   $("ask-status").textContent = "";
@@ -183,12 +189,14 @@ function setupAsk() {
   if (!window.SMART_ASK) {
     status.textContent = "No token found yet: run `pixi run codex-setup` in the VS Code terminal, then stop (Ctrl + C) and restart the dashboard.";
   }
-  $("ask-chart").closest("details").addEventListener("toggle", () => { $("ask-chart").textContent = chartText(); });
+  const refresh = () => { $("ask-chart").textContent = aiSees(chartText(), q.value.trim()); };
+  $("ask-chart").closest("details").addEventListener("toggle", refresh);
+  q.addEventListener("input", () => { if ($("ask-chart").closest("details").open) refresh(); });
   btn.addEventListener("click", async () => {
     const question = q.value.trim();
     if (!question) { status.textContent = "Type a question first."; return; }
     const chart = chartText();
-    $("ask-chart").textContent = chart;
+    $("ask-chart").textContent = aiSees(chart, question);
     btn.disabled = true;
     $("ask-answer").hidden = true;
     status.className = "muted";
