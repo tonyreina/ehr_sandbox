@@ -20,11 +20,6 @@ nav = [
     "setup/local-hapi.md",
     "setup/codex.md",
   ] },
-  { "Lessons" = [
-    "lessons/index.md",
-    "lessons/lesson-1.md",
-    "lessons/lesson-2.md",
-  ] },
   { "Authentication" = "auth.md" },
   { "EHR Clients" = "ehr-clients.md" },
   { "CLI" = "cli.md" },
