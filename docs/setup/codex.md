@@ -1,40 +1,74 @@
-# OpenAI Codex
+﻿# OpenAI Codex
 
-The course uses OpenAI Codex through the Great Learning proxy. One command points Codex at the proxy and stores your learner key so every future session picks it up.
+This setup is for course users using the course OpenAI proxy.
 
-```bash
-pixi run codex-setup <learner-api-key>
+If this is your first time using a terminal, follow the steps exactly as written.
+
+## Quick setup (Windows)
+
+1. Open the **Start menu**.
+2. Type **PowerShell**.
+3. Click **Windows PowerShell**.
+4. In the blue/black window, copy and paste this command, then press **Enter**:
+
+```powershell
+pixi run codex-setup <openai-token>
 ```
 
-Omit the key to be prompted for it (input is hidden).
+5. Replace `<openai-token>` with your real **OpenAI Token**.
 
-## What it does
+Example:
 
-- Writes `~/.codex/config.toml` (`%USERPROFILE%\.codex\config.toml` on Windows) with the proxy URL, model and `env_key = "CODEX_LEARNER_KEY"`. An existing config that this script did not write is saved to `config.toml.bak`.
-- Stores the key for future sessions. On macOS, Linux and WSL it adds `export CODEX_LEARNER_KEY=...` to your shell rc file (`~/.zshrc`, `~/.bashrc` or `~/.profile`); macOS also runs `launchctl setenv` so apps launched from the Dock see the key. On Windows it sets a user environment variable with `setx`.
-- Is safe to re-run, for example to rotate your key.
-
-The key lives only in your home directory, never in this repository.
-
-## After running it
-
-1. Fully quit VS Code (Cmd+Q on macOS), then reopen it. Or open a new terminal and run `code`.
-2. Open the Codex extension. It connects without asking for a key.
-
-To verify (open a new terminal first):
-
-```bash
-cat ~/.codex/config.toml
-echo $CODEX_LEARNER_KEY
+```powershell
+pixi run codex-setup gl-abc123efgh4567IJKLM890...
 ```
+
+If you do not want to paste your **OpenAI Token** in the command, run this instead:
+
+```powershell
+pixi run codex-setup
+```
+
+Then paste your **OpenAI Token** when prompted (the input is hidden on purpose).
+
+## What this command does automatically
+
+You do **not** need to configure anything manually.
+
+- Saves Codex settings to `%USERPROFILE%\.codex\config.toml`.
+- Sets the API base URL to the course proxy endpoint automatically.
+- Saves your **OpenAI Token** as a Windows user environment variable named `OPENAI_TOKEN`.
+
+## Finish setup
+
+1. Fully close VS Code.
+2. Open VS Code again.
+3. Open the Codex extension.
+
+## Simple check (Windows)
+
+Open a **new** PowerShell window and run:
 
 ```powershell
 Get-Content ~\.codex\config.toml
-$env:CODEX_LEARNER_KEY
+$env:OPENAI_TOKEN
 ```
 
-## Windows with WSL
+You should see:
 
-Run the command in the environment where the Codex extension runs. A VS Code window connected to WSL ("WSL: Ubuntu" in the corner) uses the Linux side, so run it in the WSL terminal. A normal Windows window uses Windows, so run it in PowerShell. If you use both, run it in both.
+- a `base_url = "..."` line that points to the course proxy
+- `env_key = "OPENAI_TOKEN"`
+- Your **OpenAI Token** printed after the second command.
 
-The code is [ehr/codex.py](https://github.com/tonyreina/ehr_sandbox/blob/main/ehr/codex.py). Edit the proxy URL, model and reasoning effort at the top of that file.
+If you do not see your **OpenAI Token**, close PowerShell and VS Code completely, reopen both, and run the check again.
+
+## If you use WSL
+
+Run setup in the same place where Codex runs:
+
+- VS Code window says **WSL: Ubuntu** -> run setup in the WSL terminal.
+- Normal VS Code window (not WSL) -> run setup in Windows PowerShell.
+
+If you use both, run setup in both.
+
+The setup script is in `ehr/codex.py`.

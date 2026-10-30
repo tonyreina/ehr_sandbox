@@ -11,7 +11,7 @@
 
 ## Tools
 
-- **[pixi](https://pixi.sh)** — manages the Python environment and all dependencies.
+- **[pixi](https://pixi.sh)** ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â manages the Python environment and all dependencies.
 
     === "Linux / macOS"
         ```bash
@@ -37,12 +37,12 @@ pixi install
 
 This installs all conda-forge packages **and** the `ehr` package itself as an editable install (via `pyproject.toml`), so changes to `ehr/` take effect immediately without reinstalling.
 
-## OpenAI Codex (course learners)
+## OpenAI Codex (course users)
 
-After `pixi install`, configure Codex with your learner key:
+After `pixi install`, configure Codex with your **OpenAI Token**:
 
 ```bash
-pixi run codex-setup <learner-api-key>
+pixi run codex-setup <openai-token>
 ```
 
 Then fully quit and reopen VS Code. See [OpenAI Codex](codex.md) for what it changes, verification, and WSL notes.
@@ -59,3 +59,6 @@ Then fully quit and reopen VS Code. See [OpenAI Codex](codex.md) for what it cha
 | `fhirclient` | FHIR model helpers |
 | `zensical` | Documentation site generator |
 | `hatchling` | Build backend for the editable install |
+
+
+
