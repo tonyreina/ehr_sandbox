@@ -145,7 +145,8 @@ def ask_detail(chart: str, question: str, base_url: str = codex.PROXY_URL) -> As
     if len(chart) > MAX_CHART:
         chart = chart[:MAX_CHART] + "\n[chart truncated]"
     body = {"model": codex.DEFAULT_MODEL, "instructions": INSTRUCTIONS,
-            "input": INPUT_TEMPLATE.format(chart=chart, question=question)}
+            "input": INPUT_TEMPLATE.format(chart=chart, question=question),
+            "store": False}        # do not keep the chart and answer on the server
     try:
         r = requests.post(f"{base_url.rstrip('/')}/responses", json=body, timeout=120,
                           headers={"Authorization": f"Bearer {key}"})

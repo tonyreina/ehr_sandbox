@@ -22,7 +22,7 @@ Open the **Ask AI** tab next to **Chart**, just below the patient banner. The AI
 2. It sends that text and your question to the AI through the course proxy, together with standing instructions: answer only from the chart, say "Not documented in this chart" if unsure, and name the section each fact comes from.
 3. The answer appears below. Open **What the AI sees** to read exactly what it was given: the **system message** (the standing instructions above, shown in green) and the **user message** (the chart text and your question).
 
-Under each answer, four chips show the **model** that answered, the **cost** of the question, and the number of **input tokens** (what you sent: the instructions, the chart and your question) and **output tokens** (what the AI wrote). A cost shown with `≈` is an estimate from published per-token prices; a cost the course proxy reports itself has no `≈`.
+Under each answer, four chips show the **model** that answered, the **cost** of the question, and the number of **input tokens** (what you sent: the instructions, the chart and your question) and **output tokens** (what the AI wrote). The course proxy does not report a cost, so the cost is always an estimate (`≈`) from published per-token prices. The request also tells the proxy not to store your chart or the answer.
 
 The AI knows nothing about the patient except that text. If a fact is not on the page, it is not available to the AI.
 

@@ -42,4 +42,5 @@ The browser test of the dashboard needs a developer environment that learners do
 ```bash
 pixi run -e dev install-browser   # once: downloads Chromium for Playwright
 pixi run -e dev ui-test           # drives the dashboard against a fake FHIR server, no internet or token needed
+pixi run ask-test                 # the Ask box's proxy client against a mock proxy
 ```

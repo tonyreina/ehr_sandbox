@@ -21,6 +21,7 @@ hapi-load          = "python cli.py hapi-load"
 hapi-scenarios     = "python cli.py hapi-scenarios"
 codex-setup        = "python cli.py codex-setup"
 codex-check        = "python cli.py codex-check"
+ask-test           = "python tests/ask_test.py"
 
 # Developer environment (not installed for learners): `pixi run -e dev install-browser` once,
 # then `pixi run -e dev ui-test`.
