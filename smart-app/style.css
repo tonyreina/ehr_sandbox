@@ -5,7 +5,7 @@
   --text: #14181f;     --text-2: #4d5563; --text-3: #6b7280;
   --grid: #e3e7ec;     --border: #d5dbe3;  --zebra: #f8fafc;
   --appbar: #1d3557;   --appbar-text: #ffffff; --appbar-2: #c9d6e8;
-  --banner: #e6eef7;   --banner-edge: #2f6db5;
+  --banner: #e6eef7;   --banner-edge: #2f6db5;  --system: #1a7f37;
   --nav-active: #dbe7f5;
   --flag-high: #b42318; --flag-low: #1d4ed8; --flag-bg-high: #fdecea; --flag-bg-low: #e8efff;
   --alert: #9a6700;    --alert-bg: #fff6db;
@@ -19,7 +19,7 @@
     --text: #eef0f3;    --text-2: #b9c0cb; --text-3: #8d95a1;
     --grid: #2d333c;    --border: #353c47; --zebra: #222730;
     --appbar: #0f1e33;  --appbar-text: #ffffff; --appbar-2: #9fb3cf;
-    --banner: #1b2a3e;  --banner-edge: #5b9be3;
+    --banner: #1b2a3e;  --banner-edge: #5b9be3;  --system: #3fb950;
     --nav-active: #24364f;
     --flag-high: #ff8a80; --flag-low: #8ab4ff; --flag-bg-high: #3a1f1f; --flag-bg-low: #1d2740;
     --alert: #f5c451;   --alert-bg: #33290f;
@@ -170,3 +170,4 @@ td.abnormal-low { font-weight: 700; color: var(--flag-low); }
 .tabs button[aria-selected="true"] { color: inherit; border-bottom-color: var(--banner-edge); }
 .ask-pane { max-width: 56rem; margin: 0 auto; padding: 1rem; }
 .ask-pane[hidden], #pane-chart[hidden] { display: none; }
+.ask-system { color: var(--system); }

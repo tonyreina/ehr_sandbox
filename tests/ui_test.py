@@ -1,4 +1,4 @@
-"""Browser test of the dashboard's Chart / Ask AI tabs (run: pixi run -e dev ui-test [--screenshots DIR]).
+"""Browser test of the dashboard's Chart / Ask AI tabs (run: pixi run -e dev ui-test [--screenshots DIR] [--dark]).
 
 Needs no internet and no token: the dashboard talks to a small fake FHIR server built from the
 teaching scenarios in ehr/scenarios.py, and the /api/ask call is answered by the test.
@@ -106,7 +106,7 @@ def main() -> None:
                 time.sleep(0.5)
         with sync_playwright() as pw:
             browser = pw.chromium.launch()
-            page = browser.new_page(viewport={"width": 1280, "height": 900})
+            page = browser.new_page(viewport={"width": 1280, "height": 900}, color_scheme="dark" if "--dark" in sys.argv else "light")
             errors: list[str] = []
             page.on("pageerror", lambda e: errors.append(str(e)))
             asked: list[dict] = []
@@ -148,9 +148,18 @@ def main() -> None:
             seen = page.text_content("#ask-chart")
             check("What the AI sees shows the system message", "SYSTEM MESSAGE" in seen and "Not documented in this chart" in seen)
             check("What the AI sees shows the chart and question", "USER MESSAGE" in seen and "== Medications ==" in seen and "QUESTION: Summarize" in seen)
+            green = lambda sel: page.evaluate("(s) => { const c = getComputedStyle(document.querySelector(s)).color.match(/\\d+/g).map(Number); return c[1] > c[0] + 30 && c[1] > c[2] + 30; }", sel)
+            check("the system message is green", green("#ask-chart .ask-system"))
+            check("the system message span holds only the system message",
+                  page.text_content("#ask-chart .ask-system").startswith("SYSTEM MESSAGE") and "USER MESSAGE" not in page.text_content("#ask-chart .ask-system"))
+            check("the user message is not green", not page.evaluate("() => { const c = getComputedStyle(document.querySelector('#ask-chart')).color.match(/\\d+/g).map(Number); return c[1] > c[0] + 30 && c[1] > c[2] + 30; }"))
             page.fill("#ask-q", "Typed live?")
             check("What the AI sees updates as you type", "QUESTION: Typed live?" in page.text_content("#ask-chart"))
 
+            if "--screenshots" in sys.argv:         # the open "What the AI sees" box
+                shots = Path(sys.argv[sys.argv.index("--screenshots") + 1])
+                shots.mkdir(parents=True, exist_ok=True)
+                page.screenshot(path=str(shots / "sees.png"), full_page=True)
             page.focus("#tab-ask")
             page.keyboard.press("ArrowLeft")
             check("ArrowLeft moves to the Chart tab", sel() == ["true", "false"])
