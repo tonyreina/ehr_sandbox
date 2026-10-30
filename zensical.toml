@@ -2,6 +2,8 @@
 site_name = "FHIR Sandbox"
 site_description = "Python demos and a SMART on FHIR dashboard for the Epic and Oracle Health (Cerner) FHIR R4 sandboxes."
 site_author = "Tony Reina"
+repo_url = "https://github.com/tonyreina/ehr_sandbox"
+repo_name = "tonyreina/ehr_sandbox"
 docs_dir = "docs"
 site_dir = "site"
 use_directory_urls = true

@@ -11,7 +11,7 @@
 
 ## Tools
 
-- **[pixi](https://pixi.sh)** ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â manages the Python environment and all dependencies.
+- **[pixi](https://pixi.sh)** — manages the Python environment and all dependencies.
 
     === "Linux / macOS"
         ```bash
