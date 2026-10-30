@@ -28,14 +28,31 @@ Install these three tools, then get the project. All lessons use VS Code.
 
 - **[Docker](https://docs.docker.com/get-docker/)** — runs the local HAPI patient server (`pixi run hapi-up`). It is not needed for the Cerner or Epic sandboxes, but the lessons use the local server.
 
-    === "Windows / macOS"
-        Install [Docker Desktop](https://www.docker.com/products/docker-desktop/), start it, and wait until it says it is running. On Windows the installer also sets up WSL 2; restart if it asks.
+    === "macOS"
+        1. Download [Docker Desktop for Mac](https://docs.docker.com/desktop/setup/install/mac-install/). Choose **Apple silicon** or **Intel** to match your Mac (**Apple menu > About This Mac** shows the chip).
+        2. Open `Docker.dmg`, drag **Docker** into **Applications**, then open it from Applications. The first start can take a few minutes while macOS checks it.
+        3. Accept the **Subscription Service Agreement**. Docker Desktop will not run until you do. You do not need to sign in.
+        4. Wait until Docker Desktop says it is running.
+
+        Requirements: the current macOS or one of the two previous major releases, and at least 4 GB of RAM. On Apple silicon, Rosetta 2 is recommended; install it with `softwareupdate --install-rosetta` if prompted.
+    === "Windows"
+        1. Download [Docker Desktop for Windows](https://docs.docker.com/desktop/setup/install/windows-install/) (x86_64 for most PCs).
+        2. Run `Docker Desktop Installer.exe`. Keep the default **WSL 2** backend and the default per-user install.
+        3. Click **Close** when it finishes, then **start Docker Desktop yourself** from the Start menu. It does not start automatically after installing.
+        4. Accept the **Subscription Service Agreement**. You do not need to sign in.
+        5. Wait until Docker Desktop says it is running.
+
+        Requirements: Windows 10 (22H2) or Windows 11 (23H2) or newer, 8 GB of RAM, and virtualization turned on in your PC's BIOS/UEFI (usually already on). Turning on WSL 2 for the first time needs administrator rights once; restart if it asks. Check your WSL version with `wsl --version` (2.1.5 or later).
+
     === "Ubuntu / Linux"
         Install [Docker Engine](https://docs.docker.com/engine/install/ubuntu/), then let your user run it without `sudo`, and log out and back in:
 
         ```bash
         sudo usermod -aG docker $USER
         ```
+
+    !!! note "Docker Desktop licensing"
+        Docker Desktop is free for personal use, education and small businesses (under 250 employees and under $10 million annual revenue). A larger organization, such as many hospitals, needs a paid subscription for work use. If you are using this course on a work computer, ask your IT department.
 
     Check that it works in the VS Code terminal:
 
