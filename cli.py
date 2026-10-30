@@ -1,5 +1,6 @@
 """FHIR Sandbox CLI (Epic, Cerner, HAPI)."""
 import os
+import re
 import subprocess
 from pathlib import Path
 from typing import Annotated, Optional
@@ -213,6 +214,10 @@ def hapi_load(
     numbered_names: Annotated[bool, typer.Option(
         "--numbered-names/--plain-names",
         help="Synthea's own names carry random digits (Erin498); plain names are the default")] = False,
+    condition: Annotated[Optional[str], typer.Option(
+        "--condition", "-c", help="Only patients with a matching condition, e.g. 'diabetes mellitus type 2', 'heart failure', kidney, sepsis")] = None,
+    age: Annotated[Optional[str], typer.Option("--age", help="Age range in years, e.g. 65-90")] = None,
+    gender: Annotated[Optional[str], typer.Option("--gender", help="M or F")] = None,
 ):
     """Generate Synthea patients and load them into the local HAPI server (run hapi-up first)."""
     from ehr import hapi_local
@@ -225,7 +230,16 @@ def hapi_load(
                    "`pixi run hapi-down --delete-data` to start empty.", err=True)
         raise typer.Exit(1)
     typer.echo(f"Generating {patients} Synthea patients ({state}, seed {seed}); the first run downloads Synthea (~200 MB)...")
-    fhir_dir = hapi_local.generate(patients, seed, state, numbered_names)
+    if gender and gender.upper() not in ("M", "F"):
+        raise typer.BadParameter("--gender must be M or F")
+    if age and not re.fullmatch(r"\d{1,3}-\d{1,3}", age):
+        raise typer.BadParameter("--age must look like 65-90")
+    try:
+        fhir_dir = hapi_local.generate(patients, seed, state, numbered_names,
+                                       age=age, gender=gender.upper() if gender else None, condition=condition)
+    except RuntimeError as e:
+        typer.echo(str(e), err=True)
+        raise typer.Exit(1)
     typer.echo("Loading into HAPI (about 4 s per patient)...")
     for i, (name, n) in enumerate(hapi_local.load(fhir_dir), 1):
         typer.echo(f"  {i:>3}  {name[:50]:<50} {n} resources")

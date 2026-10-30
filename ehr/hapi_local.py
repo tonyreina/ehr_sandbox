@@ -7,6 +7,7 @@ runs from a Java 17 image (this machine's Java may be older).
 import glob
 import json
 import os
+import shutil
 import subprocess
 import time
 import urllib.request
@@ -85,28 +86,68 @@ def patient_count(base: str = BASE) -> int:
     return requests.get(f"{base}/Patient", params={"_summary": "count"}, timeout=30).json().get("total", 0)
 
 
-def generate(patients: int, seed: int, state: str, numbered_names: bool = False) -> Path:
-    """Run Synthea in Docker; returns the directory of FHIR bundles.
-
-    Synthea appends random digits to person names (Erin498) so they are obviously fake; by default
-    they are left off here.
-    """
+def _run_synthea(patients: int, seed: int, state: str, numbered_names: bool, age: str | None,
+                 gender: str | None) -> Path:
+    """One Synthea run in Docker (clearing the previous output); returns the bundle directory."""
     SYNTHEA_DIR.mkdir(parents=True, exist_ok=True)
     if not SYNTHEA_JAR.exists():
         urllib.request.urlretrieve(SYNTHEA_URL, SYNTHEA_JAR)
     out = SYNTHEA_DIR / "output"
     for old in glob.glob(str(out / "fhir" / "*.json")):
         os.remove(old)
+    cohort = (["-a", age] if age else []) + (["-g", gender] if gender else [])
     _docker(
         "run", "--rm", "-u", f"{os.getuid()}:{os.getgid()}", "-v", f"{SYNTHEA_DIR}:/synthea", "-w", "/synthea",
         JAVA_IMAGE, "java", "-jar", SYNTHEA_JAR.name,
-        "-p", str(patients), "-s", str(seed), "--exporter.baseDirectory=/synthea/output",
+        "-p", str(patients), "-s", str(seed), *cohort, "--exporter.baseDirectory=/synthea/output",
         "--exporter.fhir.export=true", "--exporter.fhir.use_us_core_ig=false",
         "--exporter.hospital.fhir.export=true", "--exporter.practitioner.fhir.export=true",
         f"--generate.append_numbers_to_person_names={str(numbered_names).lower()}",
         state,
     )
     return out / "fhir"
+
+
+def _has_condition(bundle_file: Path, text: str) -> bool:
+    """True when the patient bundle has a Condition whose name contains *text* (case-insensitive)."""
+    text = text.lower()
+    for e in json.loads(bundle_file.read_text()).get("entry", []):
+        r = e["resource"]
+        if r.get("resourceType") == "Condition" and text in r.get("code", {}).get("text", "").lower():
+            return True
+    return False
+
+
+def generate(patients: int, seed: int, state: str, numbered_names: bool = False,
+             age: str | None = None, gender: str | None = None, condition: str | None = None) -> Path:
+    """Run Synthea in Docker; returns the directory of FHIR bundles.
+
+    Synthea appends random digits to person names (Erin498) so they are obviously fake; by default
+    they are left off here.
+
+    *age* is a "min-max" range in years and *gender* is "M" or "F". With *condition* (for example
+    "diabetes") only patients who have a matching condition are kept: Synthea cannot guarantee a
+    disease, so it is run in batches until enough patients match (raises if it cannot find them).
+    """
+    if not condition:
+        return _run_synthea(patients, seed, state, numbered_names, age, gender)
+    cohort = SYNTHEA_DIR / "output" / "fhir-cohort"
+    shutil.rmtree(cohort, ignore_errors=True)
+    cohort.mkdir(parents=True)
+    kept = 0
+    batch = min(max(patients * 8, 50), 400)
+    for i in range(6):
+        fhir = _run_synthea(batch, seed + i, state, numbered_names, age, gender)
+        for f in sorted(fhir.glob("*.json")):
+            if f.name.startswith(("hospitalInformation", "practitionerInformation")):
+                shutil.copy(f, cohort / f.name)
+            elif kept < patients and _has_condition(f, condition):
+                shutil.copy(f, cohort / f.name)
+                kept += 1
+        if kept >= patients:
+            return cohort
+    raise RuntimeError(f"Found only {kept} of {patients} patients with a condition matching {condition!r}; "
+                       "check the spelling, widen --age, or ask for fewer patients.")
 
 
 def load(fhir_dir: Path, base: str = BASE):
