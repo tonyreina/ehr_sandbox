@@ -45,7 +45,8 @@ def _output_text(data: dict) -> str:
 def _error_detail(r: requests.Response, key: str) -> str:
     """The proxy's own error message, short and with the token removed: ': <message>' or ''."""
     try:
-        err = r.json().get("error")
+        data = r.json()
+        err = data.get("error") or data.get("reason") or data.get("detail") or data.get("message")
         msg = err.get("message") if isinstance(err, dict) else err
     except (ValueError, AttributeError):
         msg = r.text
