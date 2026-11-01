@@ -8,5 +8,6 @@ Practice with realistic synthetic patients: look at a chart in your browser, the
 2. [Connect Codex](setup/codex.md): save your course token and test it.
 3. [Start the practice patients](setup/local-hapi.md).
 4. [Open the dashboard](demos/smart-app.md) and use the **Ask AI** tab.
+5. [Build workflows with n8n](setup/n8n.md) and draft a referral letter.
 
 Connecting to Epic or Cerner? See [Advanced](advanced.md).

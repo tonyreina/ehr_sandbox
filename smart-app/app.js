@@ -203,8 +203,10 @@ function showAiSees(chart, question) {
   box.replaceChildren(el("span", p.system, "ask-system"), el("span", `\n\n${p.user}`));
 }
 
+const TABS = ["chart", "ask", "referral"];
+
 function selectTab(name) {
-  for (const t of ["chart", "ask"]) {
+  for (const t of TABS) {
     const on = t === name;
     $(`tab-${t}`).setAttribute("aria-selected", String(on));
     $(`tab-${t}`).tabIndex = on ? 0 : -1;
@@ -213,26 +215,26 @@ function selectTab(name) {
 }
 
 function setupTabs() {
-  const tabs = [$("tab-chart"), $("tab-ask")];
-  tabs.forEach((tab, i) => {
-    tab.addEventListener("click", () => selectTab(i ? "ask" : "chart"));
+  TABS.forEach((name, i) => {
+    const tab = $(`tab-${name}`);
+    tab.addEventListener("click", () => selectTab(name));
     tab.addEventListener("keydown", e => {
       if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
-      const next = (i + (e.key === "ArrowRight" ? 1 : tabs.length - 1)) % tabs.length;
-      selectTab(next ? "ask" : "chart");
-      tabs[next].focus();
+      const next = TABS[(i + (e.key === "ArrowRight" ? 1 : TABS.length - 1)) % TABS.length];
+      selectTab(next);
+      $(`tab-${next}`).focus();
     });
   });
 }
 
 // Chips under the answer: which model answered and what the question cost.
-function showAskMeta(d) {
+function showAskMeta(d, boxId = "ask-meta") {
   const count = n => (typeof n === "number" ? n.toLocaleString() : "n/a");
   const cost = d.cost_usd == null ? "n/a"
     : (d.cost_estimated ? "≈ " : "") + (d.cost_usd > 0 && d.cost_usd < 0.0001 ? "< $0.0001" : `$${d.cost_usd.toFixed(4)}`);
   const chips = [["Model", d.model || "n/a"], ["Cost", cost], ["Input tokens", count(d.input_tokens)],
                  ["Output tokens", count(d.output_tokens)]];
-  const box = $("ask-meta");
+  const box = $(boxId);
   box.replaceChildren(...chips.map(([label, value]) => {
     const chip = el("span", `${label}: ${value}`, "chip");
     if (label === "Cost" && d.cost_estimated) chip.title = "Estimated from published per-token prices; the course proxy may bill differently.";
@@ -241,7 +243,76 @@ function showAskMeta(d) {
   box.hidden = false;
 }
 
+// ---- Referral: an n8n workflow reads the visit from the EHR and asks the AI to draft a letter ----
+let currentPatientId = "", activeServer = "", referralVisits = [];
+
+function setupReferral() {
+  $("ref-btn").addEventListener("click", draftReferral);
+  $("ref-copy").addEventListener("click", async () => {
+    try { await navigator.clipboard.writeText($("ref-letter").value); $("ref-status").textContent = "Copied."; }
+    catch { $("ref-letter").select(); $("ref-status").textContent = "Press Ctrl + C to copy the selected text."; }
+  });
+}
+
+// Fill the visit menu and say whether referrals can run for this EHR.
+function updateReferral() {
+  const select = $("ref-encounter");
+  select.replaceChildren(...referralVisits.map(v => { const o = el("option", v.label); o.value = v.id; return o; }));
+  const note = $("ref-unavailable");
+  let problem = "";
+  if (profileKey !== "hapi") problem = "Referrals use the practice patients. Start the dashboard with: pixi run smart-app --ehr hapi";
+  else if (!/^http:\/\/(localhost|127\.0\.0\.1):8080\//.test(activeServer))
+    problem = "The referral workflow reads the practice patient server (localhost:8080), but this dashboard is using another server.";
+  else if (!referralVisits.length) problem = "This patient has no visits to refer from.";
+  note.textContent = problem;
+  note.hidden = !problem;
+  $("ref-btn").disabled = profileKey !== "hapi" || !referralVisits.length;
+}
+
+function clearReferral() {
+  referralVisits = [];
+  $("ref-letter").hidden = true;
+  $("ref-letter").value = "";
+  $("ref-meta").hidden = true;
+  $("ref-copy").hidden = true;
+  $("ref-status").textContent = "";
+  $("ref-sees").textContent = "";
+  $("ref-sees").closest("details").open = false;
+  updateReferral();
+}
+
+async function draftReferral() {
+  const btn = $("ref-btn"), status = $("ref-status");
+  btn.disabled = true;
+  $("ref-letter").hidden = true; $("ref-meta").hidden = true; $("ref-copy").hidden = true;
+  status.className = "muted";
+  status.textContent = "Drafting (about 10 seconds)…";
+  try {
+    const r = await fetch("/api/referral", { method: "POST",
+      headers: { "Content-Type": "application/json", "X-Ask": "1" },
+      body: JSON.stringify({ patientId: currentPatientId, encounterId: $("ref-encounter").value,
+        specialty: $("ref-specialty").value, urgency: $("ref-urgency").value, reason: $("ref-reason").value.trim() }) });
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(data.error || `Request failed (${r.status}).`);
+    $("ref-letter").value = data.letter;
+    $("ref-letter").hidden = false;
+    $("ref-copy").hidden = false;
+    showAskMeta(data, "ref-meta");
+    if (data.sees) {
+      $("ref-sees").replaceChildren(el("span", `SYSTEM MESSAGE (standing instructions)\n${data.sees.system.trim()}`, "ask-system"),
+                                    el("span", `\n\nUSER MESSAGE (chart, visit and your request)\n${data.sees.user}`));
+    }
+    status.textContent = "Draft ready. Read it and edit it before you use it.";
+  } catch (e) {
+    status.className = "error";
+    status.textContent = e.message;
+  } finally {
+    btn.disabled = !referralVisits.length;
+  }
+}
+
 function clearAsk() {
+  clearReferral();
   for (const [, id] of ASK_SECTIONS) delete $(id).dataset.aiText;   // never carry the last patient's lists over
   $("ask-meta").hidden = true;
   $("ask-answer").hidden = true;
@@ -294,6 +365,8 @@ function setupAsk() {
 }
 
 async function loadPatient(client, patientId) {
+  currentPatientId = patientId;
+  activeServer = client.state.serverUrl || "";
   clearAsk();
   const token = ++current;
   $("status").className = "muted";
@@ -340,6 +413,8 @@ async function loadPatient(client, patientId) {
     }, () => setChip("chip-allergies", "Allergies: unavailable")),
     section(token, "encounters", () => bundle(client, `Encounter?patient=${pid}&_count=20`), rs => {
       const es = encounters(rs);
+      referralVisits = es.filter(e => e.id).map(e => ({ id: e.id, label: `${e.date || "undated"} · ${e.reason || e.kind}` }));
+      updateReferral();
       // The sandbox often has no encounter dates; show where instead of a column of dashes.
       const dated = es.some(e => e.date);
       renderList("encounters",
@@ -498,6 +573,7 @@ function requireSignIn(note) {
 (async function main() {
   setupTabs();
   setupAsk();
+  setupReferral();
   const q = new URLSearchParams(window.location.search);
   const returning = q.has("code") || q.has("error") || !!store.get("SMART_KEY");
   profileKey = chooseProfile(cfg, { ehrParam: q.get("ehr"), saved: returning ? store.get("smart_ehr") : null, def: window.SMART_DEFAULT_EHR });

@@ -27,6 +27,10 @@ The AI is told to answer only from the chart and to say "Not documented" when it
 
 If the tab says no token was found, run `pixi run codex-setup <your-token>` (see [Connect Codex](../setup/codex.md)), then press Ctrl + C and start the dashboard again.
 
+## Referral tab
+
+Drafts a letter to a specialist from the patient's chart and a visit you pick. It runs an [n8n workflow](../setup/n8n.md) (start it with `pixi run n8n-up`) and works with the practice patients. You can edit the draft; nothing is sent or saved. **What the AI sees** shows the instructions and the chart text it was given.
+
 ## Other EHRs
 
 `--ehr cerner` opens the public Oracle Health sandbox with no login. `--ehr epic` needs your own Epic app. See [Advanced](../advanced.md) and the [dashboard internals](smart-app-internals.md).

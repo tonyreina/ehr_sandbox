@@ -22,6 +22,7 @@ JAVA_IMAGE = "eclipse-temurin:17-jre"
 PORT = 8080
 BASE = f"http://localhost:{PORT}/fhir"
 NONROOT = "65532"                       # user the HAPI image runs as
+NETWORK = "ehr-net"                     # shared with n8n so its workflows can reach HAPI as http://ehr-hapi:8080/fhir
 
 SYNTHEA_DIR = Path(__file__).parent.parent / "data" / "synthea"
 SYNTHEA_JAR = SYNTHEA_DIR / "synthea-with-dependencies.jar"
@@ -47,6 +48,13 @@ def ready(base: str = BASE) -> bool:
         return False
 
 
+def ensure_network() -> None:
+    """Create the shared Docker network (if needed) and put a running HAPI container on it."""
+    _docker("network", "create", NETWORK, check=False)
+    if _running():
+        _docker("network", "connect", NETWORK, CONTAINER, check=False)      # already connected is fine
+
+
 def up(timeout: int = 240) -> str:
     """Start (creating if needed) the HAPI container and wait until it answers. Returns the base URL."""
     if not _running():
@@ -55,8 +63,9 @@ def up(timeout: int = 240) -> str:
         else:
             # The image runs as a non-root user, so a fresh volume must be handed over to it first.
             _docker("run", "--rm", "-v", f"{VOLUME}:/data", "busybox", "chown", "-R", f"{NONROOT}:{NONROOT}", "/data")
+            _docker("network", "create", NETWORK, check=False)
             _docker(
-                "run", "-d", "--name", CONTAINER, "-p", f"{PORT}:8080", "-v", f"{VOLUME}:/data/hapi",
+                "run", "-d", "--name", CONTAINER, "--network", NETWORK, "-p", f"{PORT}:8080", "-v", f"{VOLUME}:/data/hapi",
                 "-e", "SPRING_DATASOURCE_URL=jdbc:h2:file:/data/hapi/h2;DB_CLOSE_ON_EXIT=FALSE;AUTO_RECONNECT=TRUE",
                 "-e", "SPRING_DATASOURCE_USERNAME=sa", "-e", "SPRING_DATASOURCE_PASSWORD=sa",
                 "-e", "SPRING_DATASOURCE_DRIVERCLASSNAME=org.h2.Driver",
@@ -64,6 +73,7 @@ def up(timeout: int = 240) -> str:
                 "-e", "HAPI_FHIR_ALLOW_EXTERNAL_REFERENCES=true",
                 HAPI_IMAGE,
             )
+    ensure_network()
     deadline = time.time() + timeout
     while time.time() < deadline:
         if ready():

@@ -118,6 +118,15 @@ def main() -> None:
                                                "input_tokens": 1234, "output_tokens": 56, "cost_usd": 0.002944,
                                                "cost_estimated": True}))
             page.route("**/api/ask", fake_ask)
+            referrals: list[dict] = []
+
+            def fake_referral(route):
+                referrals.append(json.loads(route.request.post_data))
+                route.fulfill(status=200, content_type="application/json", body=json.dumps({
+                    "letter": "Dear Colleague,\n\nMOCK REFERRAL LETTER", "model": "gpt-5.3-codex", "input_tokens": 400,
+                    "output_tokens": 120, "cost_usd": 0.00238, "cost_estimated": True,
+                    "sees": {"system": "You are an assistant helping a clinician draft a referral letter.", "user": "CHART:\nPatient: Maria Alvarez"}}))
+            page.route("**/api/referral", fake_referral)
 
             page.goto(f"http://localhost:{port}/index.html?ehr=hapi")
             page.wait_for_selector("#dash:not([hidden])", timeout=30000)
@@ -129,6 +138,7 @@ def main() -> None:
 
             sel = lambda: page.evaluate("['tab-chart','tab-ask'].map(i => document.getElementById(i).getAttribute('aria-selected'))")
             hidden = lambda: page.evaluate("[document.getElementById('pane-chart').hidden, document.getElementById('pane-ask').hidden]")
+            green = lambda sel: page.evaluate("(s) => { const c = getComputedStyle(document.querySelector(s)).color.match(/\\d+/g).map(Number); return c[1] > c[0] + 30 && c[1] > c[2] + 30; }", sel)
             check("starts on the Chart tab", sel() == ["true", "false"] and hidden() == [False, True])
             check("sidebar no longer has an Ask link", page.locator('.sidebar a[href="#sec-ask"]').count() == 0)
 
@@ -154,7 +164,6 @@ def main() -> None:
             seen = page.text_content("#ask-chart")
             check("What the AI sees shows the system message", "SYSTEM MESSAGE" in seen and "Not documented in this chart" in seen)
             check("What the AI sees shows the chart and question", "USER MESSAGE" in seen and "== Medications ==" in seen and "QUESTION: Summarize" in seen)
-            green = lambda sel: page.evaluate("(s) => { const c = getComputedStyle(document.querySelector(s)).color.match(/\\d+/g).map(Number); return c[1] > c[0] + 30 && c[1] > c[2] + 30; }", sel)
             check("the system message is green", green("#ask-chart .ask-system"))
             check("the system message span holds only the system message",
                   page.text_content("#ask-chart .ask-system").startswith("SYSTEM MESSAGE") and "USER MESSAGE" not in page.text_content("#ask-chart .ask-system"))
@@ -189,6 +198,30 @@ def main() -> None:
             creat = next((l for l in ai.split("\n") if l.startswith("Creatinine")), "")
             check("the AI gets each lab's history, not just the latest value", creat.count(";") == 4 and ": 1;" in creat and ": 2.6" in creat)
 
+            # --- Referral tab ---
+            page.click("#tab-referral")
+            visits = page.locator("#ref-encounter option").all_text_contents()
+            check("the Referral tab lists the patient's visits", len(visits) >= 1 and any("Heart failure follow-up" in v for v in visits))
+            check("it warns when the dashboard is not on the local practice server", "another server" in page.text_content("#ref-unavailable"))
+            page.select_option("#ref-specialty", "Endocrinology")
+            page.select_option("#ref-urgency", "Urgent")
+            page.fill("#ref-reason", "Overdue diabetes review")
+            page.click("#ref-btn")
+            page.wait_for_selector("#ref-letter:not([hidden])")
+            check("the draft letter appears in an editable box", "MOCK REFERRAL LETTER" in page.input_value("#ref-letter"))
+            sent = referrals[0] if referrals else {}
+            check("the request names patient, visit, specialty, urgency and reason",
+                  sent.get("patientId") == "scn-robert" and sent.get("encounterId", "").startswith("scn-robert-") and
+                  (sent.get("specialty"), sent.get("urgency"), sent.get("reason")) == ("Endocrinology", "Urgent", "Overdue diabetes review"))
+            check("chips show model, estimated cost and tokens",
+                  page.locator("#ref-meta .chip").all_text_contents() == ["Model: gpt-5.3-codex", "Cost: ≈ $0.0024", "Input tokens: 400", "Output tokens: 120"])
+            page.click("#sec-referral details summary")
+            check("What the AI sees shows the system message in green and the user message",
+                  "SYSTEM MESSAGE" in page.text_content("#ref-sees") and "USER MESSAGE" in page.text_content("#ref-sees") and green("#ref-sees .ask-system"))
+            page.fill("#ref-letter", "Edited by the clinician")
+            check("the letter can be edited", page.input_value("#ref-letter") == "Edited by the clinician")
+            page.click("#tab-ask")
+
             page.select_option("#patient-select", "scn-alex")
             page.wait_for_function("() => document.querySelector('#name').textContent.includes('Rivera')", timeout=30000)
             check("changing patient keeps the tab and clears the old answer", sel() == ["false", "true"] and page.is_hidden("#ask-answer"))
@@ -197,6 +230,7 @@ def main() -> None:
                   "== Allergies ==\nNone documented." in alex and "never recorded" not in alex)
             check("empty medications read 'None documented.' to the AI, not 'on file'", "== Medications ==\nNone documented." in alex and "on file" not in alex)
             check("changing patient hides the old chips", page.is_hidden("#ask-meta"))
+            check("changing patient clears the referral draft", page.is_hidden("#ref-letter") and page.is_hidden("#ref-meta"))
             check("changing patient closes What the AI sees", not page.evaluate("document.querySelector('#sec-ask details').open"))
 
             page.wait_for_function("() => !/Loading/.test(document.getElementById('allergies').innerText)", timeout=30000)

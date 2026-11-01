@@ -1,0 +1,397 @@
+{
+  "id": "RefLetter0000001",
+  "name": "Referral letter",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "referral",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "a1000000-0000-4000-8000-000000000001",
+      "name": "Referral request",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "a1000000-0000-4000-8000-0000000000aa"
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.HAPI_BASE }}/Patient/{{ $('Referral request').first().json.body.patientId }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "a1000000-0000-4000-8000-000000000002",
+      "name": "Get patient",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.HAPI_BASE }}/Encounter/{{ $('Referral request').first().json.body.encounterId }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "a1000000-0000-4000-8000-000000000003",
+      "name": "Get encounter",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        480,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.HAPI_BASE }}/Condition",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "patient",
+              "value": "={{ $('Referral request').first().json.body.patientId }}"
+            },
+            {
+              "name": "_count",
+              "value": "50"
+            }
+          ]
+        }
+      },
+      "id": "a1000000-0000-4000-8000-000000000004",
+      "name": "Get problems",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        720,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.HAPI_BASE }}/MedicationRequest",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "patient",
+              "value": "={{ $('Referral request').first().json.body.patientId }}"
+            },
+            {
+              "name": "_count",
+              "value": "50"
+            }
+          ]
+        }
+      },
+      "id": "a1000000-0000-4000-8000-000000000005",
+      "name": "Get medications",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        960,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.HAPI_BASE }}/AllergyIntolerance",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "patient",
+              "value": "={{ $('Referral request').first().json.body.patientId }}"
+            },
+            {
+              "name": "_count",
+              "value": "50"
+            }
+          ]
+        }
+      },
+      "id": "a1000000-0000-4000-8000-000000000006",
+      "name": "Get allergies",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1200,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.HAPI_BASE }}/Observation",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "patient",
+              "value": "={{ $('Referral request').first().json.body.patientId }}"
+            },
+            {
+              "name": "category",
+              "value": "laboratory"
+            },
+            {
+              "name": "_sort",
+              "value": "-date"
+            },
+            {
+              "name": "_count",
+              "value": "100"
+            }
+          ]
+        }
+      },
+      "id": "a1000000-0000-4000-8000-000000000007",
+      "name": "Get labs",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1440,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Turn the records from the earlier steps into plain text for the AI.\nconst req = $('Referral request').first().json.body;\nconst pt = $('Get patient').first().json;\nconst enc = $('Get encounter').first().json;\nconst bundle = name => ($(name).first().json.entry || []).map(e => e.resource);\nconst text = cc => (cc && (cc.text || (cc.coding && cc.coding[0] && cc.coding[0].display))) || '';\nconst day = d => (d || '').slice(0, 10);\nconst visitClass = { AMB: 'Ambulatory visit', IMP: 'Inpatient stay', EMER: 'Emergency visit', VR: 'Virtual visit', HH: 'Home visit' };\nconst list = items => (items.length ? items.map(i => '- ' + i).join('\\n') : 'None documented.');\n\nconst n = (pt.name || [])[0] || {};\nconst name = [(n.given || []).join(' '), n.family].join(' ').trim() || 'Unknown';\nconst age = pt.birthDate ? Math.floor((Date.now() - Date.parse(pt.birthDate)) / 31557600000) : 'not documented';\n\nconst problems = [...new Set(bundle('Get problems').map(r => text(r.code)).filter(Boolean))];\nconst medications = bundle('Get medications').filter(r => r.status === 'active').map(r => {\n  const dose = ((r.dosageInstruction || [])[0] || {}).text;\n  return text(r.medicationCodeableConcept) + (dose ? ' - ' + dose : '');\n});\nconst allergies = bundle('Get allergies').map(r => {\n  const reaction = (((r.reaction || [])[0] || {}).manifestation || []).map(m => m.text).filter(Boolean).join(', ');\n  return text(r.code) + (reaction ? ' (' + reaction + ')' : '');\n});\nconst latest = {};\nfor (const o of bundle('Get labs')) {\n  const q = o.valueQuantity;\n  if (!q) continue;\n  const key = text(o.code), when = o.effectiveDateTime || '';\n  if (!latest[key] || when > latest[key].when) latest[key] = { when, v: q.value, u: q.unit };\n}\nconst results = Object.entries(latest).map(([k, l]) => `${k}: ${l.v} ${l.u} (${day(l.when)})`);\n\nconst chart = [\n  `Patient: ${name}`,\n  `${pt.gender || 'sex not documented'}, ${age} years, born ${pt.birthDate || 'not documented'}`,\n  '',\n  '== Encounter being referred from ==',\n  `Date: ${day((enc.period || {}).start) || 'not documented'}`,\n  `Type: ${((enc.type || [])[0] || {}).text || visitClass[(enc.class || {}).code] || (enc.class || {}).code || 'Encounter'}`,\n  `Reason: ${((enc.reasonCode || [])[0] || {}).text || 'not documented'}`,\n  `Status: ${enc.status || 'not documented'}`,\n  '',\n  '== Problem list ==', list(problems),\n  '',\n  '== Current medications ==', list(medications),\n  '',\n  '== Allergies ==', list(allergies),\n  '',\n  '== Results (latest of each test) ==', list(results),\n].join('\\n');\n\nconst input = `CHART:\\n${chart}\\n\\nREFERRAL REQUEST\\nSpecialty: ${req.specialty || 'not given'}\\nUrgency: ${req.urgency || 'Routine'}\\nClinician's reason for referral: ${req.reason || 'Not provided. Say what the encounter shows and that no reason was given.'}`;\nconst instructions = \"You are an assistant helping a clinician draft a referral letter to a specialist. The chart is synthetic teaching data.\\n\\nRules:\\n- Use only the chart text provided. Never invent findings, doses, dates or history.\\n- If the letter needs something that is not in the chart, write \\\"Not documented\\\" in its place.\\n- Use plain, professional language. Keep the letter to one page.\\n- Use these headings: Patient, Reason for referral, Relevant history, Current medications, Allergies, Pertinent results, Question for the specialist, Urgency.\\n- The reason for referral is the clinician's reason if one is given; otherwise say what the encounter shows and that no reason was given.\\n- Mention anything in the chart that looks inconsistent or unsafe, so the specialist knows.\\n- End with the line \\\"Draft for clinician review. Not sent.\\\" and a signature line \\\"[Referring clinician]\\\".\";\n\nreturn [{ json: {\n  request: { model: $env.AI_MODEL || 'gpt-5.3-codex', instructions, input, store: false },\n  sees: { system: instructions, user: input },\n} }];\n"
+      },
+      "id": "a1000000-0000-4000-8000-000000000008",
+      "name": "Build the prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1680,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.AI_BASE_URL }}/responses",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.OPENAI_TOKEN }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.request) }}",
+        "options": {
+          "timeout": 120000,
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "a1000000-0000-4000-8000-000000000009",
+      "name": "Ask the AI",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1920,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Pick the letter and the token counts out of the AI's reply.\nconst r = $input.first().json;\nconst letter = (r.output || []).filter(i => i.type === 'message').flatMap(i => i.content || [])\n  .filter(c => c.type === 'output_text').map(c => c.text).join('').trim();\nconst u = r.usage || {};\nreturn [{ json: {\n  letter,\n  model: r.model,\n  input_tokens: u.input_tokens,\n  output_tokens: u.output_tokens,\n  cached_tokens: (u.input_tokens_details || {}).cached_tokens || 0,\n  sees: $('Build the prompt').first().json.sees,\n} }];\n"
+      },
+      "id": "a1000000-0000-4000-8000-00000000000a",
+      "name": "Pick out the letter",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2160,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "id": "a1000000-0000-4000-8000-00000000000b",
+      "name": "Send the letter back",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        2400,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "Referral request": {
+      "main": [
+        [
+          {
+            "node": "Get patient",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get patient": {
+      "main": [
+        [
+          {
+            "node": "Get encounter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get encounter": {
+      "main": [
+        [
+          {
+            "node": "Get problems",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get problems": {
+      "main": [
+        [
+          {
+            "node": "Get medications",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get medications": {
+      "main": [
+        [
+          {
+            "node": "Get allergies",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get allergies": {
+      "main": [
+        [
+          {
+            "node": "Get labs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get labs": {
+      "main": [
+        [
+          {
+            "node": "Build the prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build the prompt": {
+      "main": [
+        [
+          {
+            "node": "Ask the AI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ask the AI": {
+      "main": [
+        [
+          {
+            "node": "Pick out the letter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pick out the letter": {
+      "main": [
+        [
+          {
+            "node": "Send the letter back",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "a1000000-0000-4000-8000-0000000000cc",
+  "pinData": {},
+  "tags": []
+}

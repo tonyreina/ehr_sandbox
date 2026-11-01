@@ -168,6 +168,8 @@ function allergies(resources) {
 
 function encounters(resources) {
   return resources.map(r => ({
+    id: r.id || "",
+    reason: ((r.reasonCode || [])[0] || {}).text || "",
     date: ((r.period || {}).start || "").slice(0, 10),
     kind: (r.type || []).map(t => t.text).filter(Boolean).join(", ") || "Encounter",
     cls: (r.class || {}).code || "",

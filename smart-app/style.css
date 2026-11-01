@@ -172,3 +172,17 @@ td.abnormal-low { font-weight: 700; color: var(--flag-low); }
 .ask-pane[hidden], #pane-chart[hidden] { display: none; }
 .ask-system { color: var(--system); }
 .ask-meta { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .5rem; }
+
+/* ---- referral tab ---- */
+.ref-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr)); gap: .6rem .8rem; margin: .6rem 0; }
+.ref-form label { display: flex; flex-direction: column; gap: .2rem; font-size: .82rem; color: var(--text-2); }
+.ref-form .wide { grid-column: 1 / -1; }
+.ref-form select, .ref-form textarea { font: inherit; padding: .35rem .45rem; border: 1px solid var(--border);
+  border-radius: 4px; background: var(--card); color: inherit; }
+#ref-btn { padding: .35rem 1rem; border: 0; border-radius: 4px; cursor: pointer; background: var(--banner-edge); color: #fff; font: inherit; }
+#ref-btn:disabled { opacity: .55; cursor: not-allowed; }
+.ref-letter { width: 100%; box-sizing: border-box; margin-top: .5rem; font: inherit; line-height: 1.45; padding: .6rem .7rem;
+  border: 1px solid var(--border); border-radius: 4px; background: var(--card); color: inherit; resize: vertical; }
+.secondary { margin-top: .5rem; font: inherit; padding: .3rem .8rem; border: 1px solid var(--border); border-radius: 4px; background: var(--card); color: inherit; cursor: pointer; }
+.notice-inline { padding: .4rem .6rem; border: 1px solid var(--alert); border-radius: 4px; background: var(--alert-bg); color: var(--alert); font-size: .85rem; }
+.notice-inline[hidden] { display: none; }
