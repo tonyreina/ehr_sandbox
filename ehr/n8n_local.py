@@ -5,6 +5,7 @@ The course token is passed in as an environment variable (never written to the w
 workflow can call the course proxy with {{ $env.OPENAI_TOKEN }}. The starter workflows in n8n/workflows
 are imported the first time n8n starts; later starts keep whatever the learner changed.
 """
+import json
 import os
 import subprocess
 import time
@@ -33,10 +34,26 @@ def _exists() -> bool:
 
 
 def ready() -> bool:
+    """True once n8n has finished its own database setup (/healthz answers a few seconds earlier)."""
     try:
-        return requests.get(f"{URL}/healthz", timeout=3).ok
+        return requests.get(f"{URL}/healthz/readiness", timeout=3).ok
     except requests.RequestException:
         return False
+
+
+def _exec(*args: str, tries: int = 6, delay: int = 5) -> None:
+    """docker exec in the n8n container, retrying: right after a first start n8n can still be busy with
+    its database. The error shown is n8n's own message, not just an exit code."""
+    last = ""
+    for attempt in range(tries):
+        r = _docker("exec", CONTAINER, *args, check=False)
+        if r.returncode == 0:
+            return
+        last = (r.stderr or r.stdout).strip().splitlines()[-1:] or ["no message"]
+        last = last[0][:300]
+        if attempt < tries - 1:
+            time.sleep(delay)
+    raise RuntimeError(f"`n8n {' '.join(args[1:3])}` failed: {last}")
 
 
 def _wait(timeout: int) -> None:
@@ -89,10 +106,9 @@ def _import_starters() -> None:
     """Import and publish the starter workflows once (a marker in the data volume remembers it)."""
     if _docker("exec", CONTAINER, "test", "-f", IMPORTED, check=False).returncode == 0:
         return
-    _docker("exec", CONTAINER, "n8n", "import:workflow", "--separate", "--input=/workflows")
+    _exec("n8n", "import:workflow", "--separate", "--input=/workflows")
     for f in sorted(WORKFLOWS.glob("*.json")):
-        wid = __import__("json").loads(f.read_text(encoding="utf-8"))["id"]
-        _docker("exec", CONTAINER, "n8n", "publish:workflow", f"--id={wid}")
+        _exec("n8n", "publish:workflow", f"--id={json.loads(f.read_text(encoding='utf-8'))['id']}")
     _docker("exec", CONTAINER, "touch", IMPORTED)
     _docker("restart", CONTAINER)                         # published workflows are registered on start
 
