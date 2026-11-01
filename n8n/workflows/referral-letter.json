@@ -248,12 +248,24 @@
     },
     {
       "parameters": {
-        "jsCode": "// Pick the letter and the token counts out of the AI's reply.\nconst r = $input.first().json;\nconst letter = (r.output || []).filter(i => i.type === 'message').flatMap(i => i.content || [])\n  .filter(c => c.type === 'output_text').map(c => c.text).join('').trim();\nconst u = r.usage || {};\nreturn [{ json: {\n  letter,\n  model: r.model,\n  input_tokens: u.input_tokens,\n  output_tokens: u.output_tokens,\n  cached_tokens: (u.input_tokens_details || {}).cached_tokens || 0,\n  sees: $('Build the prompt').first().json.sees,\n} }];\n"
+        "method": "POST",
+        "url": "={{ $env.STEPS_URL }}/pick_letter",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        }
       },
       "id": "a1000000-0000-4000-8000-00000000000a",
       "name": "Pick out the letter",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
       "position": [
         2160,
         0
@@ -262,7 +274,7 @@
     {
       "parameters": {
         "respondWith": "json",
-        "responseBody": "={{ $json }}",
+        "responseBody": "={{ Object.assign({}, $json, { sees: $('Build the prompt').first().json.sees }) }}",
         "options": {}
       },
       "id": "a1000000-0000-4000-8000-00000000000b",

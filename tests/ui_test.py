@@ -122,6 +122,9 @@ def main() -> None:
 
             def fake_referral(route):
                 referrals.append(json.loads(route.request.post_data))
+                if referrals[-1].get("reason") == "trigger python error":
+                    return route.fulfill(status=502, content_type="application/json",
+                                         body=json.dumps({"error": "The Python step failed: KeyError: 'missing'"}))
                 route.fulfill(status=200, content_type="application/json", body=json.dumps({
                     "letter": "Dear Colleague,\n\nMOCK REFERRAL LETTER", "model": "gpt-5.3-codex", "input_tokens": 400,
                     "output_tokens": 120, "cost_usd": 0.00238, "cost_estimated": True,
@@ -203,6 +206,11 @@ def main() -> None:
             visits = page.locator("#ref-encounter option").all_text_contents()
             check("the Referral tab lists the patient's visits", len(visits) >= 1 and any("Heart failure follow-up" in v for v in visits))
             check("it warns when the dashboard is not on the local practice server", "another server" in page.text_content("#ref-unavailable"))
+            page.fill("#ref-reason", "trigger python error")
+            page.click("#ref-btn")
+            page.wait_for_selector("#ref-status.error")
+            check("an error in the Python step is shown, not hidden", "Python step failed: KeyError" in page.text_content("#ref-status") and page.is_hidden("#ref-letter"))
+            referrals.clear()
             page.select_option("#ref-specialty", "Endocrinology")
             page.select_option("#ref-urgency", "Urgent")
             page.fill("#ref-reason", "Overdue diabetes review")

@@ -2,7 +2,8 @@
 
 n8n joins the same Docker network as HAPI, so a workflow reads patients from http://ehr-hapi:8080/fhir.
 The course token is passed in as an environment variable (never written to the workflow files), so a
-workflow can call the course proxy with {{ $env.OPENAI_TOKEN }}. The starter workflows in n8n/workflows
+workflow can call the course proxy with {{ $env.OPENAI_TOKEN }}. A second small container (ehr-steps) runs the
+Python files in n8n/steps, which workflows call over HTTP, so a step can be edited in VS Code. The starter workflows in n8n/workflows
 are imported the first time n8n starts; later starts keep whatever the learner changed.
 """
 import json
@@ -18,6 +19,10 @@ from ehr import ask, codex, hapi_local
 CONTAINER = "ehr-n8n"
 VOLUME = "ehr-n8n-data"
 IMAGE = "docker.n8n.io/n8nio/n8n:2.45.7"
+STEPS_CONTAINER = "ehr-steps"                       # runs the Python files in n8n/steps for the workflows
+STEPS_IMAGE = "python:3.12-slim"
+STEPS_URL = f"http://{STEPS_CONTAINER}:8000"
+N8N_DIR = Path(__file__).parent.parent / "n8n"
 PORT = 5678
 URL = f"http://localhost:{PORT}"
 WORKFLOWS = Path(__file__).parent.parent / "n8n" / "workflows"
@@ -82,6 +87,24 @@ def _wait_webhooks(timeout: int) -> None:
     raise RuntimeError(f"The workflows did not become active within {timeout}s; see `docker logs {CONTAINER}`")
 
 
+def _run_steps() -> None:
+    """Start the Python step server; edits to n8n/steps/*.py apply to the next request."""
+    hapi_local.ensure_network()
+    _docker("rm", "-f", STEPS_CONTAINER, check=False)
+    _docker(
+        "run", "-d", "--name", STEPS_CONTAINER, "--network", hapi_local.NETWORK,
+        "-v", f"{N8N_DIR / 'step_server.py'}:/app/step_server.py:ro", "-v", f"{N8N_DIR / 'steps'}:/steps:ro",
+        "-w", "/app", STEPS_IMAGE, "python", "-u", "step_server.py",
+    )
+    deadline = time.time() + 60
+    probe = f"import urllib.request; urllib.request.urlopen('http://localhost:8000/healthz')"
+    while time.time() < deadline:
+        if _docker("exec", STEPS_CONTAINER, "python", "-c", probe, check=False).returncode == 0:
+            return
+        time.sleep(1)
+    raise RuntimeError(f"The Python step server did not start; see `docker logs {STEPS_CONTAINER}`")
+
+
 def _run_container(ai_base_url: str) -> None:
     hapi_local.ensure_network()
     _docker("rm", "-f", CONTAINER, check=False)           # recreated each time so a new token is picked up
@@ -92,7 +115,7 @@ def _run_container(ai_base_url: str) -> None:
         "--add-host", "host.docker.internal:host-gateway",
         "-p", f"127.0.0.1:{PORT}:5678",
         "-v", f"{VOLUME}:/home/node/.n8n", "-v", f"{WORKFLOWS}:/workflows:ro",
-        "-e", f"HAPI_BASE=http://{hapi_local.CONTAINER}:8080/fhir",
+        "-e", f"HAPI_BASE=http://{hapi_local.CONTAINER}:8080/fhir", "-e", f"STEPS_URL={STEPS_URL}",
         "-e", f"AI_BASE_URL={ai_base_url}", "-e", f"AI_MODEL={codex.DEFAULT_MODEL}", "-e", codex.ENV_VAR,
         "-e", "N8N_BLOCK_ENV_ACCESS_IN_NODE=false",       # workflows read the settings above with $env
         "-e", "N8N_SECURE_COOKIE=false", "-e", "N8N_DIAGNOSTICS_ENABLED=false",
@@ -115,6 +138,7 @@ def _import_starters() -> None:
 
 def up(timeout: int = 180, ai_base_url: str = codex.PROXY_URL, reset_workflows: bool = False) -> str:
     """Start n8n (HAPI should be running too) and wait until it answers. Returns its address."""
+    _run_steps()
     _run_container(ai_base_url)
     _wait(timeout)
     if reset_workflows:
@@ -127,6 +151,6 @@ def up(timeout: int = 180, ai_base_url: str = codex.PROXY_URL, reset_workflows: 
 
 def down(delete_data: bool = False) -> None:
     """Stop and remove n8n; its data volume (accounts, edited workflows) stays unless *delete_data*."""
-    _docker("rm", "-f", CONTAINER, check=False)
+    _docker("rm", "-f", CONTAINER, STEPS_CONTAINER, check=False)
     if delete_data:
         _docker("volume", "rm", "-f", VOLUME, check=False)

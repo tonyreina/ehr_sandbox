@@ -580,6 +580,8 @@ def smart_app(
                 out = r.json()
             except ValueError:
                 out = {}
+            if out.get("error"):                    # the Python step (n8n/steps/pick_letter.py) failed
+                return self._json(502, {"error": f"The Python step failed: {out['error']}"})
             if not out.get("letter"):
                 return self._json(502, {"error": "The workflow returned no letter. Open n8n > Executions and check the Ask the AI step."})
             cost = ask_mod.estimate_cost(out.get("model") or "", out.get("input_tokens"), out.get("output_tokens"), out.get("cached_tokens"))
