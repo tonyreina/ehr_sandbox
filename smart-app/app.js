@@ -277,15 +277,30 @@ function renderMarkdown(box, text) {
 // ---- Referral: an n8n workflow reads the visit from the EHR and asks the AI to draft a letter ----
 let currentPatientId = "", activeServer = "", referralVisits = [];
 
-function showLetterPreview() {
-  const show = !$("ref-letter").hidden;
-  $("ref-preview").hidden = $("ref-preview-label").hidden = !show;
-  if (show) renderMarkdown($("ref-preview"), $("ref-letter").value);
+function showLetterPreview() { renderMarkdown($("ref-preview"), $("ref-letter").value); }
+
+// The letter has two views: the formatted preview (default) and the markdown text you can edit.
+function selectLetterView(view) {
+  const markdown = view === "markdown";
+  for (const [id, on] of [["subtab-markdown", markdown], ["subtab-preview", !markdown]]) {
+    $(id).setAttribute("aria-selected", String(on));
+    $(id).tabIndex = on ? 0 : -1;
+  }
+  $("ref-letter").hidden = !markdown;
+  $("ref-preview").hidden = markdown;
 }
 
 function setupReferral() {
   $("ref-btn").addEventListener("click", draftReferral);
   $("ref-letter").addEventListener("input", showLetterPreview);
+  for (const [id, view, other] of [["subtab-markdown", "markdown", "preview"], ["subtab-preview", "preview", "markdown"]]) {
+    $(id).addEventListener("click", () => { selectLetterView(view); if (view === "markdown") $("ref-letter").focus(); });
+    $(id).addEventListener("keydown", e => {
+      if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+      selectLetterView(other);
+      $(`subtab-${other}`).focus();
+    });
+  }
   $("ref-copy").addEventListener("click", async () => {
     try { await navigator.clipboard.writeText($("ref-letter").value); $("ref-status").textContent = "Copied."; }
     catch { $("ref-letter").select(); $("ref-status").textContent = "Press Ctrl + C to copy the selected text."; }
@@ -309,9 +324,10 @@ function updateReferral() {
 
 function clearReferral() {
   referralVisits = [];
-  $("ref-letter").hidden = true;
+  $("ref-letter-box").hidden = true;
   $("ref-letter").value = "";
   showLetterPreview();
+  selectLetterView("preview");
   $("ref-meta").hidden = true;
   $("ref-copy").hidden = true;
   $("ref-status").textContent = "";
@@ -323,8 +339,7 @@ function clearReferral() {
 async function draftReferral() {
   const btn = $("ref-btn"), status = $("ref-status");
   btn.disabled = true;
-  $("ref-letter").hidden = true; $("ref-meta").hidden = true; $("ref-copy").hidden = true;
-  showLetterPreview();
+  $("ref-letter-box").hidden = true; $("ref-meta").hidden = true; $("ref-copy").hidden = true;
   status.className = "muted";
   status.textContent = "Drafting (about 10 seconds)…";
   try {
@@ -335,8 +350,9 @@ async function draftReferral() {
     const data = await r.json().catch(() => ({}));
     if (!r.ok) throw new Error(data.error || `Request failed (${r.status}).`);
     $("ref-letter").value = data.letter;
-    $("ref-letter").hidden = false;
     showLetterPreview();
+    selectLetterView("preview");
+    $("ref-letter-box").hidden = false;
     $("ref-copy").hidden = false;
     showAskMeta(data, "ref-meta");
     if (data.sees) {

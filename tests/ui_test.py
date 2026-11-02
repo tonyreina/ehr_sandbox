@@ -234,16 +234,23 @@ def main() -> None:
             page.fill("#ref-reason", "trigger python error")
             page.click("#ref-btn")
             page.wait_for_selector("#ref-status.error")
-            check("an error in the Python step is shown, not hidden", "Python step failed: KeyError" in page.text_content("#ref-status") and page.is_hidden("#ref-letter"))
+            check("an error in the Python step is shown, not hidden", "Python step failed: KeyError" in page.text_content("#ref-status") and page.is_hidden("#ref-letter-box"))
             referrals.clear()
             page.select_option("#ref-specialty", "Endocrinology")
             page.select_option("#ref-urgency", "Urgent")
             page.fill("#ref-reason", "Overdue diabetes review")
             page.click("#ref-btn")
-            page.wait_for_selector("#ref-letter:not([hidden])")
-            check("the draft letter appears in an editable box", "MOCK REFERRAL LETTER" in page.input_value("#ref-letter"))
-            check("the letter has a formatted preview", page.locator("#ref-preview h4").text_content() == "Referral" and page.locator("#ref-preview strong").text_content() == "Patient:"
-                  and page.locator("#ref-preview li").count() == 2 and page.is_visible("#ref-preview-label"))
+            page.wait_for_selector("#ref-letter-box:not([hidden])")
+            tabs = lambda: page.evaluate("['subtab-markdown','subtab-preview'].map(i => document.getElementById(i).getAttribute('aria-selected'))")
+            check("the letter has two tabs, Markdown and Preview, and opens on Preview",
+                  page.locator("#ref-letter-box .subtabs button").all_text_contents() == ["Markdown", "Preview"] and tabs() == ["false", "true"]
+                  and page.is_visible("#ref-preview") and page.is_hidden("#ref-letter"))
+            check("the Preview tab shows the letter formatted", page.locator("#ref-preview h4").text_content() == "Referral" and page.locator("#ref-preview strong").text_content() == "Patient:"
+                  and page.locator("#ref-preview li").count() == 2 and "**" not in page.text_content("#ref-preview"))
+            page.click("#subtab-markdown")
+            check("the Markdown tab shows the text as written, in an editable box",
+                  tabs() == ["true", "false"] and page.is_visible("#ref-letter") and page.is_hidden("#ref-preview")
+                  and page.input_value("#ref-letter").startswith("## Referral") and "**Patient:**" in page.input_value("#ref-letter"))
             sent = referrals[0] if referrals else {}
             check("the request names patient, visit, specialty, urgency and reason",
                   sent.get("patientId") == "scn-robert" and sent.get("encounterId", "").startswith("scn-robert-") and
@@ -254,10 +261,19 @@ def main() -> None:
             check("What the AI sees shows the system message in green and the user message",
                   "SYSTEM MESSAGE" in page.text_content("#ref-sees") and "USER MESSAGE" in page.text_content("#ref-sees") and green("#ref-sees .ask-system"))
             page.fill("#ref-letter", "Edited by the clinician")
-            check("the letter can be edited", page.input_value("#ref-letter") == "Edited by the clinician")
-            check("the preview updates as the letter is edited", page.locator("#ref-preview").text_content().strip() == "Edited by the clinician")
+            check("the letter can be edited in the Markdown tab", page.input_value("#ref-letter") == "Edited by the clinician")
             page.fill("#ref-letter", "## Plan\n\n1. one\n2. two")
-            check("an edit with a list and heading shows as a list and heading", page.locator("#ref-preview h4").text_content() == "Plan" and page.locator("#ref-preview ol li").count() == 2)
+            page.click("#subtab-preview")
+            check("the Preview tab shows the edit formatted", tabs() == ["false", "true"] and page.locator("#ref-preview h4").text_content() == "Plan" and page.locator("#ref-preview ol li").count() == 2)
+            page.focus("#subtab-preview")
+            page.keyboard.press("ArrowLeft")
+            check("ArrowLeft moves between the two letter tabs", tabs() == ["true", "false"])
+            page.keyboard.press("ArrowRight")
+            check("ArrowRight moves back", tabs() == ["false", "true"])
+            page.click("#subtab-markdown")                                   # leave it on Markdown: a new draft must reopen on Preview
+            page.click("#ref-btn")
+            page.wait_for_function("() => document.getElementById('ref-letter-box').hidden === false && document.getElementById('subtab-preview').getAttribute('aria-selected') === 'true'")
+            check("a new draft opens on the Preview tab again", page.is_visible("#ref-preview") and page.is_hidden("#ref-letter"))
 
             page.click("#tab-ask")
 
@@ -269,7 +285,7 @@ def main() -> None:
                   "== Allergies ==\nNone documented." in alex and "never recorded" not in alex)
             check("empty medications read 'None documented.' to the AI, not 'on file'", "== Medications ==\nNone documented." in alex and "on file" not in alex)
             check("changing patient hides the old chips", page.is_hidden("#ask-meta"))
-            check("changing patient clears the referral draft", page.is_hidden("#ref-letter") and page.is_hidden("#ref-meta") and page.is_hidden("#ref-preview"))
+            check("changing patient clears the referral draft", page.is_hidden("#ref-letter-box") and page.is_hidden("#ref-meta"))
             check("changing patient closes What the AI sees", not page.evaluate("document.querySelector('#sec-ask details').open"))
 
             page.wait_for_function("() => !/Loading/.test(document.getElementById('allergies').innerText)", timeout=30000)

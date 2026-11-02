@@ -181,7 +181,7 @@ td.abnormal-low { font-weight: 700; color: var(--flag-low); }
   border-radius: 4px; background: var(--card); color: inherit; }
 #ref-btn { padding: .35rem 1rem; border: 0; border-radius: 4px; cursor: pointer; background: var(--banner-edge); color: #fff; font: inherit; }
 #ref-btn:disabled { opacity: .55; cursor: not-allowed; }
-.ref-letter { width: 100%; box-sizing: border-box; margin-top: .5rem; font: inherit; line-height: 1.45; padding: .6rem .7rem;
+.ref-letter { width: 100%; box-sizing: border-box; margin: 0; border-top: 0; border-radius: 0 0 4px 4px; font: inherit; line-height: 1.45; padding: .6rem .7rem;
   border: 1px solid var(--border); border-radius: 4px; background: var(--card); color: inherit; resize: vertical; }
 .secondary { margin-top: .5rem; font: inherit; padding: .3rem .8rem; border: 1px solid var(--border); border-radius: 4px; background: var(--card); color: inherit; cursor: pointer; }
 .notice-inline { padding: .4rem .6rem; border: 1px solid var(--alert); border-radius: 4px; background: var(--alert-bg); color: var(--alert); font-size: .85rem; }
@@ -206,6 +206,9 @@ td.abnormal-low { font-weight: 700; color: var(--flag-low); }
 .md th, .md td { border: 1px solid var(--border); padding: .25rem .55rem; text-align: left; }
 .md th { background: var(--panel-head); }
 .ask-answer.plain { white-space: pre-wrap; }
-.ref-preview { margin-top: .3rem; padding: .7rem .9rem; border: 1px solid var(--border); border-radius: 4px; background: var(--card); }
-.preview-label { margin: .6rem 0 0; font-size: .8rem; }
-.ref-preview[hidden], .preview-label[hidden] { display: none; }
+.ref-preview { margin: 0; padding: .7rem .9rem; min-height: 8rem; border: 1px solid var(--border); border-top: 0; border-radius: 0 0 4px 4px; background: var(--card); }
+.subtabs { display: flex; gap: .2rem; margin-top: .7rem; border-bottom: 1px solid var(--border); }
+.subtabs button { font: inherit; font-size: .88rem; font-weight: 600; padding: .3rem .9rem; border: 0; border-bottom: 3px solid transparent;
+                  background: none; color: var(--text-2); cursor: pointer; }
+.subtabs button[aria-selected="true"] { color: inherit; border-bottom-color: var(--banner-edge); }
+.ref-letter[hidden], .ref-preview[hidden] { display: none; }

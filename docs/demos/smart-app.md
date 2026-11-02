@@ -29,7 +29,7 @@ If the tab says no token was found, run `pixi run codex-setup <your-token>` (see
 
 ## Referral tab
 
-Drafts a letter to a specialist from the patient's chart and a visit you pick. It runs an [n8n workflow](../setup/n8n.md) (start it with `pixi run n8n-up`) and works with the practice patients. The letter is in an editable box, and a preview underneath shows how it looks formatted as you type. Nothing is sent or saved. **What the AI sees** shows the instructions and the chart text it was given.
+Drafts a letter to a specialist from the patient's chart and a visit you pick. It runs an [n8n workflow](../setup/n8n.md) (start it with `pixi run n8n-up`) and works with the practice patients. The letter has two tabs: **Preview** shows it formatted, and **Markdown** is the text you can edit (your edits show in the preview). Nothing is sent or saved. **What the AI sees** shows the instructions and the chart text it was given.
 
 ## Other EHRs
 

@@ -153,9 +153,14 @@
           </div>
           <button id="ref-btn" type="button">Draft referral</button>
           <p id="ref-status" class="muted" role="status"></p>
-          <textarea id="ref-letter" class="ref-letter" rows="14" hidden aria-label="Draft referral letter (markdown)"></textarea>
-          <p id="ref-preview-label" class="muted preview-label" hidden>Preview: how the letter looks formatted</p>
-          <div id="ref-preview" class="md ref-preview" aria-label="Preview of the letter" hidden></div>
+          <div id="ref-letter-box" hidden>
+            <div class="subtabs" role="tablist" aria-label="Letter view">
+              <button type="button" role="tab" id="subtab-markdown" aria-selected="false" aria-controls="ref-letter" tabindex="-1">Markdown</button>
+              <button type="button" role="tab" id="subtab-preview" aria-selected="true" aria-controls="ref-preview">Preview</button>
+            </div>
+            <textarea id="ref-letter" class="ref-letter" rows="16" role="tabpanel" aria-labelledby="subtab-markdown" hidden></textarea>
+            <div id="ref-preview" class="md ref-preview" role="tabpanel" aria-labelledby="subtab-preview"></div>
+          </div>
           <div id="ref-meta" class="ask-meta" aria-label="About this letter" hidden></div>
           <button id="ref-copy" type="button" class="secondary" hidden>Copy letter</button>
           <details><summary>What the AI sees</summary><pre id="ref-sees" class="ask-chart"></pre></details>
