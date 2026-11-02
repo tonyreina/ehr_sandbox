@@ -84,6 +84,15 @@ def _price(model: str) -> tuple[float, float, float] | None:
     return PRICES[max(names, key=len)] if names else None
 
 
+def estimate_cost(model: str, tokens_in, tokens_out, cached=0) -> float | None:
+    """USD estimated from PRICES, or None for an unknown model or missing token counts."""
+    price = _price(model)
+    if price is None or not isinstance(tokens_in, int) or not isinstance(tokens_out, int):
+        return None
+    cached = min(cached or 0, tokens_in)
+    return ((tokens_in - cached) * price[0] + cached * price[1] + tokens_out * price[2]) / 1_000_000
+
+
 def _number(value) -> float | None:
     if isinstance(value, bool):
         return None
@@ -170,9 +179,8 @@ def ask_detail(chart: str, question: str, base_url: str = codex.PROXY_URL) -> As
     tokens_out = usage.get("output_tokens", usage.get("completion_tokens"))
     model = data.get("model") or codex.DEFAULT_MODEL
     cost, estimated = _reported_cost(r.headers, data), False
-    if cost is None and isinstance(tokens_in, int) and isinstance(tokens_out, int) and (price := _price(model)):
-        cached = min((usage.get("input_tokens_details") or {}).get("cached_tokens") or 0, tokens_in)
-        cost = ((tokens_in - cached) * price[0] + cached * price[1] + tokens_out * price[2]) / 1_000_000
-        estimated = True
+    if cost is None:
+        cost = estimate_cost(model, tokens_in, tokens_out, (usage.get("input_tokens_details") or {}).get("cached_tokens"))
+        estimated = cost is not None
     return AskResult(text, model, tokens_in, tokens_out, cost, estimated,
                      raw={"headers": sorted(r.headers), "body": data})

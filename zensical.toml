@@ -15,6 +15,7 @@ nav = [
     "setup/codex.md",
     "setup/local-hapi.md",
     "demos/smart-app.md",
+    "setup/n8n.md",
   ] },
   { "Advanced" = [
     "advanced.md",

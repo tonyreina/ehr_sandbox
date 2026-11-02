@@ -20,12 +20,16 @@ It starts your practice server if needed and opens the chart. Pick a patient fro
 ## Ask AI tab
 
 1. Pick a patient, open **Ask AI**, and type a question or click an example.
-2. Press **Ask**. The answer appears with chips for the model, estimated cost and token counts.
+2. Press **Ask**. The answer appears formatted (headings, lists, bold and tables); **Show plain text** shows it as the AI wrote it. Chips show the model, estimated cost and token counts.
 3. Open **What the AI sees** to read exactly what was sent: the system message (green) and the chart text with your question. The AI knows only that text.
 
 The AI is told to answer only from the chart and to say "Not documented" when it is unsure. Check every answer yourself. Use synthetic patients only. Your token stays on your computer; the request also tells the proxy not to store your chart.
 
 If the tab says no token was found, run `pixi run codex-setup <your-token>` (see [Connect Codex](../setup/codex.md)), then press Ctrl + C and start the dashboard again.
+
+## Referral tab
+
+Drafts a letter to a specialist from the patient's chart and a visit you pick. It runs an [n8n workflow](../setup/n8n.md) (start it with `pixi run n8n-up`) and works with the practice patients. The letter has two tabs: **Preview** shows it formatted, and **Markdown** is the text you can edit (your edits show in the preview). Nothing is sent or saved. **What the AI sees** shows the instructions and the chart text it was given.
 
 ## Other EHRs
 

@@ -168,6 +168,8 @@ function allergies(resources) {
 
 function encounters(resources) {
   return resources.map(r => ({
+    id: r.id || "",
+    reason: ((r.reasonCode || [])[0] || {}).text || "",
     date: ((r.period || {}).start || "").slice(0, 10),
     kind: (r.type || []).map(t => t.text).filter(Boolean).join(", ") || "Encounter",
     cls: (r.class || {}).code || "",
@@ -225,6 +227,85 @@ function canBrowsePatients(signedIn, scopeString) {
   return !signedIn || /(^|\s)user\//.test(scopeString || "");
 }
 
+// ---- Markdown, for AI answers and letters. A small subset, parsed into plain data; app.js builds the page
+// elements from it with textContent only, so nothing the AI writes can be run as HTML. ----
+
+// Inline: `code`, **bold**, __bold__, *italic*, _italic_. A [label](url) link shows as "label (url)", never as a link.
+const INLINE = [
+  { re: /`([^`]+)`/, make: m => ({ t: "code", v: m[1] }) },
+  { re: /\*\*(.+?)\*\*/, make: m => ({ t: "strong", c: parseInline(m[1]) }) },
+  { re: /__(.+?)__/, make: m => ({ t: "strong", c: parseInline(m[1]) }) },
+  { re: /\*(?!\s)(.+?)(?<!\s)\*/, make: m => ({ t: "em", c: parseInline(m[1]) }) },
+  { re: /(?<![A-Za-z0-9])_(?!\s)(.+?)(?<!\s)_(?![A-Za-z0-9])/, make: m => ({ t: "em", c: parseInline(m[1]) }) },
+  { re: /\[([^\]]+)\]\(([^)\s]+)\)/, make: m => ({ t: "text", v: `${m[1]} (${m[2]})` }) },
+];
+
+function parseInline(text) {
+  const out = [];
+  let rest = text;
+  while (rest) {
+    let best = null;
+    for (const rule of INLINE) {
+      const m = rule.re.exec(rest);
+      if (m && (!best || m.index < best.m.index)) best = { m, rule };
+    }
+    if (!best) { out.push({ t: "text", v: rest }); break; }
+    if (best.m.index) out.push({ t: "text", v: rest.slice(0, best.m.index) });
+    out.push(best.rule.make(best.m));
+    rest = rest.slice(best.m.index + best.m[0].length);
+  }
+  return out;
+}
+
+// Lines of one paragraph keep their line breaks, which is how letters and address blocks are written.
+function inlineLines(lines) {
+  const out = [];
+  lines.forEach((line, i) => { if (i) out.push({ t: "br" }); out.push(...parseInline(line.trim())); });
+  return out;
+}
+
+const TABLE_RULE = /^\s*\|?\s*:?-+:?\s*(\|\s*:?-+:?\s*)*\|?\s*$/;
+const splitRow = line => line.trim().replace(/^\|/, "").replace(/\|$/, "").split("|").map(c => c.trim());
+
+function parseMarkdown(text) {
+  const lines = String(text || "").replace(/\r\n?/g, "\n").split("\n");
+  const blocks = [];
+  let i = 0;
+  while (i < lines.length) {
+    const line = lines[i];
+    let m;
+    if (!line.trim()) { i++; continue; }
+    if ((m = /^```/.exec(line))) {                                   // fenced code
+      const code = [];
+      for (i++; i < lines.length && !/^```/.test(lines[i]); i++) code.push(lines[i]);
+      i++;
+      blocks.push({ type: "code", text: code.join("\n") });
+    } else if ((m = /^(#{1,6})\s+(.*)$/.exec(line))) {
+      blocks.push({ type: "heading", level: m[1].length, inline: parseInline(m[2].trim()) }); i++;
+    } else if (/^\s*([-*_])(\s*\1){2,}\s*$/.test(line)) {
+      blocks.push({ type: "hr" }); i++;
+    } else if (/^\s*>/.test(line)) {
+      const quote = [];
+      for (; i < lines.length && /^\s*>/.test(lines[i]); i++) quote.push(lines[i].replace(/^\s*>\s?/, ""));
+      blocks.push({ type: "quote", inline: inlineLines(quote) });
+    } else if (line.includes("|") && i + 1 < lines.length && TABLE_RULE.test(lines[i + 1])) {
+      const header = splitRow(line).map(parseInline), rows = [];
+      for (i += 2; i < lines.length && lines[i].includes("|") && lines[i].trim(); i++) rows.push(splitRow(lines[i]).map(parseInline));
+      blocks.push({ type: "table", header, rows });
+    } else if (/^\s*([-*+]|\d+[.)])\s+/.test(line)) {
+      const ordered = /^\s*\d+[.)]/.test(line), items = [];
+      for (; i < lines.length && (m = /^\s*(?:[-*+]|\d+[.)])\s+(.*)$/.exec(lines[i])); i++) items.push(parseInline(m[1].trim()));
+      blocks.push({ type: ordered ? "ol" : "ul", items });
+    } else {                                                          // paragraph: up to a blank line or another block
+      const para = [];
+      for (; i < lines.length && lines[i].trim() && !/^(#{1,6}\s|```|\s*>|\s*([-*+]|\d+[.)])\s)/.test(lines[i]); i++) para.push(lines[i]);
+      if (!para.length) para.push(lines[i++]);
+      blocks.push({ type: "paragraph", inline: inlineLines(para) });
+    }
+  }
+  return blocks;
+}
+
 // Exactly what the AI receives, in two parts: the system message, then the user message built from the template.
 function promptParts(prompt, chart, question) {
   const user = prompt.template.replace(/\{(chart|question)\}/g, (_, k) => (k === "chart" ? chart : question));
@@ -240,5 +321,5 @@ function promptText(prompt, chart, question) {
 }
 
 if (typeof module !== "undefined") {
-  module.exports = { promptParts, promptText, labFlag, rangeText, buildFlowsheet, initials, chooseProfile, clientIdFor, scopesFor, canBrowsePatients, patientName, ageFromBirthDate, VITALS, buildVitalChart, groupLabs, medications, allergies, encounters, conditions };
+  module.exports = { parseMarkdown, parseInline, promptParts, promptText, labFlag, rangeText, buildFlowsheet, initials, chooseProfile, clientIdFor, scopesFor, canBrowsePatients, patientName, ageFromBirthDate, VITALS, buildVitalChart, groupLabs, medications, allergies, encounters, conditions };
 }

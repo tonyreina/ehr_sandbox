@@ -174,6 +174,17 @@ See [Setup → Keys](setup/keys.md) for next steps after generation.
 
 ---
 
+## n8n-up, n8n-down
+
+Start and stop [n8n](setup/n8n.md) (visual workflows) in Docker, next to the practice patients.
+
+```bash
+pixi run n8n-up [--reset-workflows]    # needs hapi-up first; --reset-workflows restores the starter workflows
+pixi run n8n-down [--delete-data]      # stop; your workflows are kept unless --delete-data
+```
+
+---
+
 ## codex-setup
 
 Point OpenAI Codex at the course proxy and store your **OpenAI Token** (Windows, macOS, Linux, WSL).

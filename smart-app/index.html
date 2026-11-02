@@ -56,6 +56,7 @@
     <div class="tabs" role="tablist" aria-label="Patient views">
       <button type="button" role="tab" id="tab-chart" aria-selected="true" aria-controls="pane-chart">Chart</button>
       <button type="button" role="tab" id="tab-ask" aria-selected="false" aria-controls="pane-ask" tabindex="-1">Ask AI</button>
+      <button type="button" role="tab" id="tab-referral" aria-selected="false" aria-controls="pane-referral" tabindex="-1">Referral</button>
     </div>
 
     <div id="pane-chart" role="tabpanel" aria-labelledby="tab-chart">
@@ -128,11 +129,43 @@
         <textarea id="ask-q" rows="2" placeholder="Ask a question about this patient" aria-label="Question about this patient"></textarea>
         <button id="ask-btn" type="button">Ask</button>
         <p id="ask-status" class="muted" role="status"></p>
-        <pre id="ask-answer" class="ask-answer" hidden></pre>
+        <div id="ask-answer" class="ask-answer md" hidden></div>
         <div id="ask-meta" class="ask-meta" aria-label="About this answer" hidden></div>
+        <button id="ask-plain" type="button" class="secondary" hidden>Show plain text</button>
         <details><summary>What the AI sees</summary><pre id="ask-chart" class="ask-chart"></pre></details>
       </div>
     </section>
+    </div>
+    <div id="pane-referral" class="ask-pane" role="tabpanel" aria-labelledby="tab-referral" hidden>
+      <section class="panel" id="sec-referral">
+        <h2 class="panel-head">Draft a referral <span class="panel-sub">an n8n workflow asks the AI; you review</span></h2>
+        <div class="panel-body">
+          <p class="muted">Synthetic data only. The AI drafts a letter to a specialist from this patient's chart and the visit you pick. Read and edit it; nothing is sent or saved.</p>
+          <p id="ref-unavailable" class="notice-inline" hidden></p>
+          <div class="ref-form">
+            <label>Visit <select id="ref-encounter"></select></label>
+            <label>Specialty <select id="ref-specialty">
+              <option>Cardiology</option><option>Endocrinology</option><option>Gastroenterology</option><option>Nephrology</option>
+              <option>Neurology</option><option>Pulmonology</option><option>Psychiatry</option><option>Surgery</option>
+            </select></label>
+            <label>Urgency <select id="ref-urgency"><option>Routine</option><option>Urgent</option><option>Emergent</option></select></label>
+            <label class="wide">Reason for referral (optional) <textarea id="ref-reason" rows="2" placeholder="For example: poor control despite treatment"></textarea></label>
+          </div>
+          <button id="ref-btn" type="button">Draft referral</button>
+          <p id="ref-status" class="muted" role="status"></p>
+          <div id="ref-letter-box" hidden>
+            <div class="subtabs" role="tablist" aria-label="Letter view">
+              <button type="button" role="tab" id="subtab-markdown" aria-selected="false" aria-controls="ref-letter" tabindex="-1">Markdown</button>
+              <button type="button" role="tab" id="subtab-preview" aria-selected="true" aria-controls="ref-preview">Preview</button>
+            </div>
+            <textarea id="ref-letter" class="ref-letter" rows="16" role="tabpanel" aria-labelledby="subtab-markdown" hidden></textarea>
+            <div id="ref-preview" class="md ref-preview" role="tabpanel" aria-labelledby="subtab-preview"></div>
+          </div>
+          <div id="ref-meta" class="ask-meta" aria-label="About this letter" hidden></div>
+          <button id="ref-copy" type="button" class="secondary" hidden>Copy letter</button>
+          <details><summary>What the AI sees</summary><pre id="ref-sees" class="ask-chart"></pre></details>
+        </div>
+      </section>
     </div>
   </div>
 </body>

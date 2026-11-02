@@ -249,6 +249,37 @@ def hapi_load(
     typer.echo("Try: pixi run list-patients --ehr hapi      pixi run smart-app --ehr hapi")
 
 
+@app.command("n8n-up")
+def n8n_up(
+    reset: Annotated[bool, typer.Option("--reset-workflows", help="Re-import the starter workflows (replaces your edits to them)")] = False,
+):
+    """Start n8n (visual workflows) in Docker, next to the practice patients."""
+    from ehr import ask as ask_mod
+    from ehr import hapi_local, n8n_local
+    if not hapi_local.ready():
+        typer.echo("The practice patient server is not running. Start it with `pixi run hapi-up`.", err=True)
+        raise typer.Exit(1)
+    if not ask_mod.token():
+        typer.echo("No token found: workflows that call the AI will fail. Run `pixi run codex-setup <your-token>`, then `pixi run n8n-up` again.", err=True)
+    typer.echo("Starting n8n (the first start pulls the image, about 1 GB)...")
+    try:
+        n8n_local.up(reset_workflows=reset)
+    except Exception as e:
+        typer.echo(f"Could not start n8n ({e}).", err=True)
+        raise typer.Exit(1)
+    typer.echo(f"n8n is ready: {n8n_local.URL}\nFirst time: create your local owner account, then open the workflow called \"Referral letter\".")
+
+
+@app.command("n8n-down")
+def n8n_down(
+    delete_data: Annotated[bool, typer.Option("--delete-data", help="Also delete your n8n account and workflows")] = False,
+):
+    """Stop n8n (your workflows are kept unless --delete-data)."""
+    from ehr import n8n_local
+    n8n_local.down(delete_data)
+    typer.echo("n8n stopped." + (" Data deleted." if delete_data else " Your workflows are kept."))
+
+
 @app.command("hapi-scenarios")
 def hapi_scenarios(
     answers: Annotated[bool, typer.Option("--answers", help="Print the instructor answer key instead of loading")] = False,
@@ -423,7 +454,7 @@ def smart_app(
     import threading
 
     from ehr import ask as ask_mod
-    from ehr import hapi_local
+    from ehr import hapi_local, n8n_local
     hapi_started = False                # True when this run started the local HAPI container
     if ehr == "hapi" and not os.getenv("HAPI_FHIR_BASE") and not hapi_local.ready():
         typer.echo("Starting the local HAPI server (first start pulls the image)...")
@@ -453,11 +484,14 @@ def smart_app(
             return epic_client
 
     class Handler(SimpleHTTPRequestHandler):
+        def end_headers(self) -> None:
+            self.send_header("Cache-Control", "no-store")     # the page's own files too: updates show on a normal reload
+            super().end_headers()
+
         def _send(self, status: int, body: bytes, ctype: str) -> None:
             self.send_response(status)
             self.send_header("Content-Type", ctype)
             self.send_header("Content-Length", str(len(body)))
-            self.send_header("Cache-Control", "no-store")
             self.end_headers()
             self.wfile.write(body)
 
@@ -491,24 +525,72 @@ def smart_app(
             super().do_GET()
 
     class AskHandler(Handler):
-        """Adds POST /api/ask: the chart text and question go to the course proxy, the token stays here."""
+        """Adds POST /api/ask and POST /api/referral. The token (and n8n) stay on this side of the browser."""
 
-        def do_POST(self):
-            if self.path != "/api/ask":
-                return self._send(404, b"not found", "text/plain")
+        def _body(self) -> dict | None:
+            """The JSON request body, or None after sending an error. Only our own page may call these."""
             # A web page on another site must not be able to spend this learner's token: require a
             # JSON request with a custom header (which browsers block cross-site) from our own origin.
             if (self.headers.get("X-Ask") != "1" or self.headers.get("Content-Type", "").split(";")[0] != "application/json"
                     or self.headers.get("Origin", SMART_BASE) != SMART_BASE):
-                return self._send(403, b'{"error": "forbidden"}', "application/json")
+                self._send(403, b'{"error": "forbidden"}', "application/json")
+                return None
             try:
                 data = json.loads(self.rfile.read(min(int(self.headers.get("Content-Length", 0)), 200_000)))
-                r = ask_mod.ask_detail(str(data.get("chart", "")), str(data.get("question", "")))
-                return self._send(200, json.dumps(r.public()).encode(), "application/json")
+                if isinstance(data, dict):
+                    return data
             except (ValueError, TypeError):
-                return self._send(400, b'{"error": "Bad request."}', "application/json")
-            except ask_mod.AskError as e:
-                return self._send(502, json.dumps({"error": str(e)}).encode(), "application/json")
+                pass
+            self._send(400, b'{"error": "Bad request."}', "application/json")
+            return None
+
+        def _json(self, status: int, body: dict) -> None:
+            self._send(status, json.dumps(body).encode(), "application/json")
+
+        def do_POST(self):
+            if self.path not in ("/api/ask", "/api/referral"):
+                return self._send(404, b"not found", "text/plain")
+            data = self._body()
+            if data is None:
+                return
+            if self.path == "/api/ask":
+                try:
+                    r = ask_mod.ask_detail(str(data.get("chart", "")), str(data.get("question", "")))
+                except ask_mod.AskError as e:
+                    return self._json(502, {"error": str(e)})
+                return self._json(200, r.public())
+            self._referral(data)
+
+        def _referral(self, data: dict) -> None:
+            """Run the n8n "Referral letter" workflow for one visit and hand back the draft letter."""
+            import re
+            import requests
+            ident = re.compile(r"[A-Za-z0-9.\-]{1,64}")
+            if not (ident.fullmatch(str(data.get("patientId", ""))) and ident.fullmatch(str(data.get("encounterId", "")))):
+                return self._json(400, {"error": "Pick a patient and a visit first."})
+            urgency = data.get("urgency") if data.get("urgency") in ("Routine", "Urgent", "Emergent") else "Routine"
+            payload = {"patientId": data["patientId"], "encounterId": data["encounterId"], "urgency": urgency,
+                       "specialty": str(data.get("specialty", ""))[:80], "reason": str(data.get("reason", ""))[:1000]}
+            try:
+                r = requests.post(f"{n8n_local.URL}/webhook/{n8n_local.STARTER_WEBHOOKS[0]}", json=payload, timeout=150)
+            except requests.RequestException:
+                return self._json(502, {"error": "n8n is not running. Start it with `pixi run n8n-up`."})
+            if r.status_code == 404:
+                return self._json(502, {"error": "The Referral letter workflow is not active in n8n. Open n8n, open it and publish it, or run `pixi run n8n-up --reset-workflows`."})
+            if not r.ok:
+                return self._json(502, {"error": f"The workflow failed ({r.status_code}). Open n8n > Executions to see which step."})
+            try:
+                out = r.json()
+            except ValueError:
+                out = {}
+            if out.get("error"):                    # the Python step (n8n/steps/pick_letter.py) failed
+                return self._json(502, {"error": f"The Python step failed: {out['error']}"})
+            if not out.get("letter"):
+                return self._json(502, {"error": "The workflow returned no letter. Open n8n > Executions and check the Ask the AI step."})
+            cost = ask_mod.estimate_cost(out.get("model") or "", out.get("input_tokens"), out.get("output_tokens"), out.get("cached_tokens"))
+            return self._json(200, {"letter": out["letter"], "model": out.get("model"), "input_tokens": out.get("input_tokens"),
+                                    "output_tokens": out.get("output_tokens"), "cost_usd": cost, "cost_estimated": cost is not None,
+                                    "sees": out.get("sees")})
 
     try:
         server = ThreadingHTTPServer(("127.0.0.1", SMART_PORT), functools.partial(AskHandler, directory=str(SMART_DIR)))

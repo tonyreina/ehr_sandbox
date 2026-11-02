@@ -1,0 +1,472 @@
+{
+  "id": "RefLetter0000001",
+  "name": "Referral letter",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "referral",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "a1000000-0000-4000-8000-000000000001",
+      "name": "Referral request",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "a1000000-0000-4000-8000-0000000000aa"
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.HAPI_BASE }}/Patient/{{ $('Referral request').first().json.body.patientId }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "a1000000-0000-4000-8000-000000000002",
+      "name": "Get patient",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.HAPI_BASE }}/Encounter/{{ $('Referral request').first().json.body.encounterId }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "a1000000-0000-4000-8000-000000000003",
+      "name": "Get encounter",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        480,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.HAPI_BASE }}/Condition",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "patient",
+              "value": "={{ $('Referral request').first().json.body.patientId }}"
+            },
+            {
+              "name": "_count",
+              "value": "50"
+            }
+          ]
+        }
+      },
+      "id": "a1000000-0000-4000-8000-000000000004",
+      "name": "Get problems",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        720,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.HAPI_BASE }}/MedicationRequest",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "patient",
+              "value": "={{ $('Referral request').first().json.body.patientId }}"
+            },
+            {
+              "name": "_count",
+              "value": "50"
+            }
+          ]
+        }
+      },
+      "id": "a1000000-0000-4000-8000-000000000005",
+      "name": "Get medications",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        960,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.HAPI_BASE }}/AllergyIntolerance",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "patient",
+              "value": "={{ $('Referral request').first().json.body.patientId }}"
+            },
+            {
+              "name": "_count",
+              "value": "50"
+            }
+          ]
+        }
+      },
+      "id": "a1000000-0000-4000-8000-000000000006",
+      "name": "Get allergies",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1200,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.HAPI_BASE }}/Observation",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "patient",
+              "value": "={{ $('Referral request').first().json.body.patientId }}"
+            },
+            {
+              "name": "category",
+              "value": "laboratory"
+            },
+            {
+              "name": "_sort",
+              "value": "-date"
+            },
+            {
+              "name": "_count",
+              "value": "100"
+            }
+          ]
+        }
+      },
+      "id": "a1000000-0000-4000-8000-000000000007",
+      "name": "Get labs",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1440,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.STEPS_URL }}/build_prompt",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: $env.AI_MODEL, request: $('Referral request').first().json.body, patient: $('Get patient').first().json, encounter: $('Get encounter').first().json, problems: $('Get problems').first().json, medications: $('Get medications').first().json, allergies: $('Get allergies').first().json, labs: $('Get labs').first().json }) }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "a1000000-0000-4000-8000-000000000008",
+      "name": "Build the prompt",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1680,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "c1000000-0000-4000-8000-000000000001",
+              "leftValue": "={{ $json.error }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "empty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "a1000000-0000-4000-8000-00000000000c",
+      "name": "Did the Python step work?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1920,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.AI_BASE_URL }}/responses",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.OPENAI_TOKEN }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.request) }}",
+        "options": {
+          "timeout": 120000,
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "a1000000-0000-4000-8000-000000000009",
+      "name": "Ask the AI",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2160,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.STEPS_URL }}/pick_letter",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "a1000000-0000-4000-8000-00000000000a",
+      "name": "Pick out the letter",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2400,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ Object.assign({}, $json, { sees: $('Build the prompt').first().json.sees }) }}",
+        "options": {}
+      },
+      "id": "a1000000-0000-4000-8000-00000000000b",
+      "name": "Send the letter back",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        2640,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "Referral request": {
+      "main": [
+        [
+          {
+            "node": "Get patient",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get patient": {
+      "main": [
+        [
+          {
+            "node": "Get encounter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get encounter": {
+      "main": [
+        [
+          {
+            "node": "Get problems",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get problems": {
+      "main": [
+        [
+          {
+            "node": "Get medications",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get medications": {
+      "main": [
+        [
+          {
+            "node": "Get allergies",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get allergies": {
+      "main": [
+        [
+          {
+            "node": "Get labs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get labs": {
+      "main": [
+        [
+          {
+            "node": "Build the prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build the prompt": {
+      "main": [
+        [
+          {
+            "node": "Did the Python step work?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Did the Python step work?": {
+      "main": [
+        [
+          {
+            "node": "Ask the AI",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send the letter back",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ask the AI": {
+      "main": [
+        [
+          {
+            "node": "Pick out the letter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pick out the letter": {
+      "main": [
+        [
+          {
+            "node": "Send the letter back",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "a1000000-0000-4000-8000-0000000000cc",
+  "pinData": {},
+  "tags": []
+}
