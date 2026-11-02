@@ -129,8 +129,9 @@
         <textarea id="ask-q" rows="2" placeholder="Ask a question about this patient" aria-label="Question about this patient"></textarea>
         <button id="ask-btn" type="button">Ask</button>
         <p id="ask-status" class="muted" role="status"></p>
-        <pre id="ask-answer" class="ask-answer" hidden></pre>
+        <div id="ask-answer" class="ask-answer md" hidden></div>
         <div id="ask-meta" class="ask-meta" aria-label="About this answer" hidden></div>
+        <button id="ask-plain" type="button" class="secondary" hidden>Show plain text</button>
         <details><summary>What the AI sees</summary><pre id="ask-chart" class="ask-chart"></pre></details>
       </div>
     </section>
@@ -152,7 +153,9 @@
           </div>
           <button id="ref-btn" type="button">Draft referral</button>
           <p id="ref-status" class="muted" role="status"></p>
-          <textarea id="ref-letter" class="ref-letter" rows="18" hidden aria-label="Draft referral letter"></textarea>
+          <textarea id="ref-letter" class="ref-letter" rows="14" hidden aria-label="Draft referral letter (markdown)"></textarea>
+          <p id="ref-preview-label" class="muted preview-label" hidden>Preview: how the letter looks formatted</p>
+          <div id="ref-preview" class="md ref-preview" aria-label="Preview of the letter" hidden></div>
           <div id="ref-meta" class="ask-meta" aria-label="About this letter" hidden></div>
           <button id="ref-copy" type="button" class="secondary" hidden>Copy letter</button>
           <details><summary>What the AI sees</summary><pre id="ref-sees" class="ask-chart"></pre></details>

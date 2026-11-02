@@ -110,11 +110,12 @@ def main() -> None:
             errors: list[str] = []
             page.on("pageerror", lambda e: errors.append(str(e)))
             asked: list[dict] = []
+            answer = {"text": "MOCK ANSWER: Metformin (Medications)."}
 
             def fake_ask(route):
                 asked.append(json.loads(route.request.post_data))
                 route.fulfill(status=200, content_type="application/json",
-                              body=json.dumps({"answer": "MOCK ANSWER: Metformin (Medications).", "model": "gpt-5.3-codex",
+                              body=json.dumps({"answer": answer["text"], "model": "gpt-5.3-codex",
                                                "input_tokens": 1234, "output_tokens": 56, "cost_usd": 0.002944,
                                                "cost_estimated": True}))
             page.route("**/api/ask", fake_ask)
@@ -126,7 +127,7 @@ def main() -> None:
                     return route.fulfill(status=502, content_type="application/json",
                                          body=json.dumps({"error": "The Python step failed: KeyError: 'missing'"}))
                 route.fulfill(status=200, content_type="application/json", body=json.dumps({
-                    "letter": "Dear Colleague,\n\nMOCK REFERRAL LETTER", "model": "gpt-5.3-codex", "input_tokens": 400,
+                    "letter": "## Referral\n\n**Patient:** Robert Kline\n\n- first point\n- second point\n\nMOCK REFERRAL LETTER", "model": "gpt-5.3-codex", "input_tokens": 400,
                     "output_tokens": 120, "cost_usd": 0.00238, "cost_estimated": True,
                     "sees": {"system": "You are an assistant helping a clinician draft a referral letter.", "user": "CHART:\nPatient: Maria Alvarez"}}))
             page.route("**/api/referral", fake_referral)
@@ -162,6 +163,30 @@ def main() -> None:
                   chips == ["Model: gpt-5.3-codex", "Cost: ≈ $0.0029", "Input tokens: 1,234", "Output tokens: 56"])
             check("the cost chip explains it is an estimate", "Estimated" in (page.get_attribute("#ask-meta .chip >> nth=1", "title") or ""))
             check("the request carried the chart and question", len(asked) == 1 and "Metformin" in asked[0]["chart"] and "Summarize" in asked[0]["question"])
+
+            # --- markdown in the answer ---
+            md = page.evaluate("""() => parseMarkdown("## Summary\\n\\n- **Metformin** 500 mg\\n- _Lisinopril_\\n\\n| a | b |\\n| - | - |\\n| 1 | 2 |").map(b => b.type)""")
+            check("the markdown parser finds headings, lists and tables", md == ["heading", "ul", "table"])
+            answer["text"] = "## Summary\n\n- **Metformin** 500 mg\n- *Lisinopril* 10 mg\n\nDear Colleague,\nThanks."
+            page.click("#ask-btn")
+            page.wait_for_function("() => document.querySelector('#ask-answer h4')")
+            check("the answer is shown formatted: heading, bullets, bold and italic, line break",
+                  page.locator("#ask-answer h4").text_content() == "Summary" and page.locator("#ask-answer li").count() == 2
+                  and page.locator("#ask-answer li strong").text_content() == "Metformin" and page.locator("#ask-answer li em").count() == 1
+                  and page.locator("#ask-answer br").count() == 1)
+            check("the raw markdown marks are not shown when formatted", "##" not in page.text_content("#ask-answer") and "**" not in page.text_content("#ask-answer"))
+            page.click("#ask-plain")
+            check("Show plain text shows the markdown as written", "## Summary" in page.text_content("#ask-answer") and "**Metformin**" in page.text_content("#ask-answer")
+                  and page.text_content("#ask-plain") == "Show formatted")
+            page.click("#ask-plain")
+            check("Show formatted goes back", page.locator("#ask-answer li").count() == 2)
+            answer["text"] = '<img src=x onerror="window.__xss=1"><script>window.__xss=2</script> **safe** [click](javascript:window.__xss=3)'
+            page.click("#ask-btn")
+            page.wait_for_function("() => document.querySelector('#ask-answer strong')")
+            check("HTML in an answer is shown as text and never runs",
+                  page.locator("#ask-answer img, #ask-answer script, #ask-answer a").count() == 0 and "<img" in page.text_content("#ask-answer")
+                  and page.evaluate("typeof window.__xss") == "undefined")
+            answer["text"] = "MOCK ANSWER: Metformin (Medications)."
 
             page.click("#sec-ask details summary")
             seen = page.text_content("#ask-chart")
@@ -217,6 +242,8 @@ def main() -> None:
             page.click("#ref-btn")
             page.wait_for_selector("#ref-letter:not([hidden])")
             check("the draft letter appears in an editable box", "MOCK REFERRAL LETTER" in page.input_value("#ref-letter"))
+            check("the letter has a formatted preview", page.locator("#ref-preview h4").text_content() == "Referral" and page.locator("#ref-preview strong").text_content() == "Patient:"
+                  and page.locator("#ref-preview li").count() == 2 and page.is_visible("#ref-preview-label"))
             sent = referrals[0] if referrals else {}
             check("the request names patient, visit, specialty, urgency and reason",
                   sent.get("patientId") == "scn-robert" and sent.get("encounterId", "").startswith("scn-robert-") and
@@ -228,6 +255,10 @@ def main() -> None:
                   "SYSTEM MESSAGE" in page.text_content("#ref-sees") and "USER MESSAGE" in page.text_content("#ref-sees") and green("#ref-sees .ask-system"))
             page.fill("#ref-letter", "Edited by the clinician")
             check("the letter can be edited", page.input_value("#ref-letter") == "Edited by the clinician")
+            check("the preview updates as the letter is edited", page.locator("#ref-preview").text_content().strip() == "Edited by the clinician")
+            page.fill("#ref-letter", "## Plan\n\n1. one\n2. two")
+            check("an edit with a list and heading shows as a list and heading", page.locator("#ref-preview h4").text_content() == "Plan" and page.locator("#ref-preview ol li").count() == 2)
+
             page.click("#tab-ask")
 
             page.select_option("#patient-select", "scn-alex")
@@ -238,7 +269,7 @@ def main() -> None:
                   "== Allergies ==\nNone documented." in alex and "never recorded" not in alex)
             check("empty medications read 'None documented.' to the AI, not 'on file'", "== Medications ==\nNone documented." in alex and "on file" not in alex)
             check("changing patient hides the old chips", page.is_hidden("#ask-meta"))
-            check("changing patient clears the referral draft", page.is_hidden("#ref-letter") and page.is_hidden("#ref-meta"))
+            check("changing patient clears the referral draft", page.is_hidden("#ref-letter") and page.is_hidden("#ref-meta") and page.is_hidden("#ref-preview"))
             check("changing patient closes What the AI sees", not page.evaluate("document.querySelector('#sec-ask details').open"))
 
             page.wait_for_function("() => !/Loading/.test(document.getElementById('allergies').innerText)", timeout=30000)

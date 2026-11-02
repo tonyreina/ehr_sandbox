@@ -243,11 +243,49 @@ function showAskMeta(d, boxId = "ask-meta") {
   box.hidden = false;
 }
 
+// ---- Markdown on the page: elements are built with createElement and textContent only, never innerHTML ----
+function inlineNodes(tokens) {
+  return tokens.map(tok => {
+    if (tok.t === "br") return document.createElement("br");
+    if (tok.t === "text") return document.createTextNode(tok.v);
+    const e = document.createElement(tok.t);                      // strong, em or code: tags our parser chooses
+    if (tok.t === "code") e.textContent = tok.v; else e.append(...inlineNodes(tok.c));
+    return e;
+  });
+}
+
+function blockNode(b) {
+  const make = (tag, children) => { const e = document.createElement(tag); e.append(...children); return e; };
+  switch (b.type) {
+    case "heading": return make(`h${Math.min(6, b.level + 2)}`, inlineNodes(b.inline));   // keep below the page's own headings
+    case "ul": case "ol": return make(b.type, b.items.map(item => make("li", inlineNodes(item))));
+    case "quote": return make("blockquote", inlineNodes(b.inline));
+    case "hr": return document.createElement("hr");
+    case "code": { const pre = document.createElement("pre"), code = document.createElement("code"); code.textContent = b.text; pre.append(code); return pre; }
+    case "table": {
+      const row = (cells, tag) => make("tr", cells.map(c => make(tag, inlineNodes(c))));
+      return make("table", [make("thead", [row(b.header, "th")]), make("tbody", b.rows.map(r => row(r, "td")))]);
+    }
+    default: return make("p", inlineNodes(b.inline));
+  }
+}
+
+function renderMarkdown(box, text) {
+  box.replaceChildren(...parseMarkdown(text).map(blockNode));
+}
+
 // ---- Referral: an n8n workflow reads the visit from the EHR and asks the AI to draft a letter ----
 let currentPatientId = "", activeServer = "", referralVisits = [];
 
+function showLetterPreview() {
+  const show = !$("ref-letter").hidden;
+  $("ref-preview").hidden = $("ref-preview-label").hidden = !show;
+  if (show) renderMarkdown($("ref-preview"), $("ref-letter").value);
+}
+
 function setupReferral() {
   $("ref-btn").addEventListener("click", draftReferral);
+  $("ref-letter").addEventListener("input", showLetterPreview);
   $("ref-copy").addEventListener("click", async () => {
     try { await navigator.clipboard.writeText($("ref-letter").value); $("ref-status").textContent = "Copied."; }
     catch { $("ref-letter").select(); $("ref-status").textContent = "Press Ctrl + C to copy the selected text."; }
@@ -273,6 +311,7 @@ function clearReferral() {
   referralVisits = [];
   $("ref-letter").hidden = true;
   $("ref-letter").value = "";
+  showLetterPreview();
   $("ref-meta").hidden = true;
   $("ref-copy").hidden = true;
   $("ref-status").textContent = "";
@@ -285,6 +324,7 @@ async function draftReferral() {
   const btn = $("ref-btn"), status = $("ref-status");
   btn.disabled = true;
   $("ref-letter").hidden = true; $("ref-meta").hidden = true; $("ref-copy").hidden = true;
+  showLetterPreview();
   status.className = "muted";
   status.textContent = "Drafting (about 10 seconds)…";
   try {
@@ -296,6 +336,7 @@ async function draftReferral() {
     if (!r.ok) throw new Error(data.error || `Request failed (${r.status}).`);
     $("ref-letter").value = data.letter;
     $("ref-letter").hidden = false;
+    showLetterPreview();
     $("ref-copy").hidden = false;
     showAskMeta(data, "ref-meta");
     if (data.sees) {
@@ -311,7 +352,17 @@ async function draftReferral() {
   }
 }
 
+let askAnswer = "", askPlain = false;
+
+function viewAskAnswer() {
+  const box = $("ask-answer");
+  box.classList.toggle("plain", askPlain);
+  if (askPlain) box.textContent = askAnswer; else renderMarkdown(box, askAnswer);
+  $("ask-plain").textContent = askPlain ? "Show formatted" : "Show plain text";
+}
+
 function clearAsk() {
+  $("ask-plain").hidden = true;
   clearReferral();
   for (const [, id] of ASK_SECTIONS) delete $(id).dataset.aiText;   // never carry the last patient's lists over
   $("ask-meta").hidden = true;
@@ -333,6 +384,7 @@ function setupAsk() {
     status.textContent = "No token found yet: run `pixi run codex-setup` in the VS Code terminal, then stop (Ctrl + C) and restart the dashboard.";
   }
   const refresh = () => showAiSees(chartText(), q.value.trim());
+  $("ask-plain").addEventListener("click", () => { askPlain = !askPlain; viewAskAnswer(); });
   $("ask-chart").closest("details").addEventListener("toggle", refresh);
   q.addEventListener("input", () => { if ($("ask-chart").closest("details").open) refresh(); });
   btn.addEventListener("click", async () => {
@@ -342,6 +394,7 @@ function setupAsk() {
     showAiSees(chart, question);
     btn.disabled = true;
     $("ask-answer").hidden = true;
+    $("ask-plain").hidden = true;
     $("ask-meta").hidden = true;
     status.className = "muted";
     status.textContent = "Thinking…";
@@ -351,8 +404,10 @@ function setupAsk() {
         body: JSON.stringify({ chart, question }) });
       const data = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(data.error || `Request failed (${r.status}).`);
-      $("ask-answer").textContent = data.answer;
+      askAnswer = data.answer;
+      viewAskAnswer();
       $("ask-answer").hidden = false;
+      $("ask-plain").hidden = false;
       showAskMeta(data);
       status.textContent = "";
     } catch (e) {
