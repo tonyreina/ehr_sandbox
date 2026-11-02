@@ -12,15 +12,27 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 tmp = tempfile.mkdtemp()
-shutil.copy(ROOT / "n8n" / "steps" / "pick_letter.py", tmp)
+shutil.copytree(ROOT / "n8n" / "steps", tmp, dirs_exist_ok=True)
 os.environ["STEPS_DIR"] = tmp
 sys.path.insert(0, str(ROOT / "n8n"))
 import step_server  # noqa: E402
+from ehr import scenarios  # noqa: E402
 
 REPLY = {"model": "gpt-5.3-codex",
          "output": [{"type": "reasoning", "content": []},
                     {"type": "message", "content": [{"type": "output_text", "text": "  Dear Colleague, "}, {"type": "output_text", "text": "Thanks.\n"}]}],
          "usage": {"input_tokens": 161, "output_tokens": 18, "input_tokens_details": {"cached_tokens": 5}}}
+
+
+def records(key: str, reason: str | None = None) -> dict:
+    """What the workflow sends to build_prompt for a teaching patient: each search result as a FHIR bundle."""
+    res = [e["resource"] for e in scenarios.bundle(key)["entry"]]
+    of = lambda t, cat=None: {"resourceType": "Bundle", "entry": [{"resource": r} for r in res if r["resourceType"] == t]}
+    visits = [r for r in res if r["resourceType"] == "Encounter"]
+    visit = next((r for r in visits if reason and r["reasonCode"][0]["text"] == reason), None) or max(visits, key=lambda r: r["period"]["start"])
+    return {"request": {"patientId": f"scn-{key}", "encounterId": visit["id"], "specialty": "Endocrinology", "urgency": "Urgent", "reason": "Overdue review"},
+            "patient": next(r for r in res if r["resourceType"] == "Patient"), "encounter": visit,
+            "problems": of("Condition"), "medications": of("MedicationRequest"), "allergies": of("AllergyIntolerance"), "labs": of("Observation")}
 
 
 def main() -> None:
@@ -65,6 +77,36 @@ def main() -> None:
     check("a typo in the file is a 500 that names the problem", status == 500 and "SyntaxError" in out["error"])
     path.write_text("def run(reply):\n    return {'x': object()}\n")
     check("a result that is not JSON is a 500, not a broken reply", post("pick_letter", REPLY)[0] == 500)
+
+    # --- build_prompt: the words the AI is told and the chart text it reads ---
+    status, out = post("build_prompt", records("maria", "Diabetes follow-up"))
+    user = out["request"]["input"] if status == 200 else ""
+    check("build_prompt writes the chart text from the records",
+          all(t in user for t in ("Patient: Maria Alvarez", "Type 2 diabetes mellitus", "Metformin 500 mg tablet - 500 mg by mouth twice daily",
+                                  "Hemoglobin A1c: 7.8 %", "Reason: Diabetes follow-up", "Type: Ambulatory visit")))
+    check("it adds the clinician's request (specialty, urgency, reason)", all(t in user for t in ("Specialty: Endocrinology", "Urgency: Urgent", "reason for referral: Overdue review")))
+    check("the request asks for the default model and tells the proxy not to store the chart",
+          out["request"]["model"] == "gpt-5.3-codex" and out["request"]["store"] is False)
+    check("the instructions list every heading and the closing line",
+          all(h in out["request"]["instructions"] for h in ("Patient", "Reason for referral", "Question for the specialist")) and "Draft for clinician review. Not sent." in out["request"]["instructions"])
+    check("what the AI sees is exactly what is sent", out["sees"] == {"system": out["request"]["instructions"], "user": out["request"]["input"]})
+    check("a model named by the workflow is used", post("build_prompt", {**records("maria"), "model": "other-model"})[1]["request"]["model"] == "other-model")
+    check("a patient with nothing recorded reads 'None documented.'",
+          "== Allergies ==\nNone documented." in post("build_prompt", records("alex"))[1]["request"]["input"])
+    check("a record that is missing does not break it", post("build_prompt", {})[0] == 200)
+
+    prompt_path = Path(tmp) / "build_prompt.py"
+    prompt_path.write_text(prompt_path.read_text().replace('"Urgency",\n]', '"Urgency",\n    "Follow-up plan",\n]'))
+    check("a heading added in the file reaches the instructions on the next request",
+          "Follow-up plan" in post("build_prompt", records("maria"))[1]["request"]["instructions"])
+    prompt_path.write_text(prompt_path.read_text().replace('Keep the letter to one page.', 'Keep the letter to three sentences.'))
+    check("a changed rule reaches the instructions", "three sentences" in post("build_prompt", records("maria"))[1]["sees"]["system"])
+
+    # --- pick_letter.format_letter: switch on a line in the file ---
+    shutil.copy(ROOT / "n8n" / "steps" / "pick_letter.py", path)
+    path.write_text(path.read_text().replace('    # letter = letter.replace("**", "")', '    letter = letter.replace("**", "")'))
+    reply = {**REPLY, "output": [{"type": "message", "content": [{"type": "output_text", "text": "**Patient:** Maria"}]}]}
+    check("format_letter can clean up the letter once a line is switched on", post("pick_letter", reply)[1]["letter"] == "Patient: Maria")
 
     srv.shutdown()
     shutil.rmtree(tmp, ignore_errors=True)

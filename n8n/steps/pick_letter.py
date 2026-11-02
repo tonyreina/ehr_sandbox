@@ -5,6 +5,16 @@ Edit this file in VS Code and save it: the next draft uses your change. No resta
 """
 
 
+def format_letter(letter: str) -> str:
+    """Change how the finished letter looks before it is shown. The default leaves it as the AI wrote it.
+
+    Try one of these (remove the # to switch it on):
+    """
+    # letter = letter.replace("**", "")                       # remove the bold marks the AI adds
+    # letter = "DRAFT - NOT SENT\n\n" + letter                # add a line at the top
+    return letter
+
+
 def run(reply: dict) -> dict:
     # The reply holds a list of messages; the letter is the text parts of the message.
     letter = "".join(
@@ -17,7 +27,7 @@ def run(reply: dict) -> dict:
 
     usage = reply.get("usage") or {}
     return {
-        "letter": letter,
+        "letter": format_letter(letter),
         "model": reply.get("model"),
         "input_tokens": usage.get("input_tokens"),
         "output_tokens": usage.get("output_tokens"),
