@@ -21,17 +21,22 @@
     },
     {
       "parameters": {
-        "url": "={{ $env.HAPI_BASE }}/Patient/{{ $('Referral request').first().json.body.patientId }}",
+        "method": "POST",
+        "url": "={{ $env.STEPS_URL }}/get_chart",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($('Referral request').first().json.body) }}",
         "options": {
           "response": {
             "response": {
+              "neverError": true,
               "responseFormat": "json"
             }
           }
         }
       },
-      "id": "a1000000-0000-4000-8000-000000000002",
-      "name": "Get patient",
+      "id": "a1000000-0000-4000-8000-00000000000d",
+      "name": "Get the chart",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
@@ -41,171 +46,11 @@
     },
     {
       "parameters": {
-        "url": "={{ $env.HAPI_BASE }}/Encounter/{{ $('Referral request').first().json.body.encounterId }}",
-        "options": {
-          "response": {
-            "response": {
-              "responseFormat": "json"
-            }
-          }
-        }
-      },
-      "id": "a1000000-0000-4000-8000-000000000003",
-      "name": "Get encounter",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        480,
-        0
-      ]
-    },
-    {
-      "parameters": {
-        "url": "={{ $env.HAPI_BASE }}/Condition",
-        "options": {
-          "response": {
-            "response": {
-              "responseFormat": "json"
-            }
-          }
-        },
-        "sendQuery": true,
-        "queryParameters": {
-          "parameters": [
-            {
-              "name": "patient",
-              "value": "={{ $('Referral request').first().json.body.patientId }}"
-            },
-            {
-              "name": "_count",
-              "value": "50"
-            }
-          ]
-        }
-      },
-      "id": "a1000000-0000-4000-8000-000000000004",
-      "name": "Get problems",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        720,
-        0
-      ]
-    },
-    {
-      "parameters": {
-        "url": "={{ $env.HAPI_BASE }}/MedicationRequest",
-        "options": {
-          "response": {
-            "response": {
-              "responseFormat": "json"
-            }
-          }
-        },
-        "sendQuery": true,
-        "queryParameters": {
-          "parameters": [
-            {
-              "name": "patient",
-              "value": "={{ $('Referral request').first().json.body.patientId }}"
-            },
-            {
-              "name": "_count",
-              "value": "50"
-            }
-          ]
-        }
-      },
-      "id": "a1000000-0000-4000-8000-000000000005",
-      "name": "Get medications",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        960,
-        0
-      ]
-    },
-    {
-      "parameters": {
-        "url": "={{ $env.HAPI_BASE }}/AllergyIntolerance",
-        "options": {
-          "response": {
-            "response": {
-              "responseFormat": "json"
-            }
-          }
-        },
-        "sendQuery": true,
-        "queryParameters": {
-          "parameters": [
-            {
-              "name": "patient",
-              "value": "={{ $('Referral request').first().json.body.patientId }}"
-            },
-            {
-              "name": "_count",
-              "value": "50"
-            }
-          ]
-        }
-      },
-      "id": "a1000000-0000-4000-8000-000000000006",
-      "name": "Get allergies",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        1200,
-        0
-      ]
-    },
-    {
-      "parameters": {
-        "url": "={{ $env.HAPI_BASE }}/Observation",
-        "options": {
-          "response": {
-            "response": {
-              "responseFormat": "json"
-            }
-          }
-        },
-        "sendQuery": true,
-        "queryParameters": {
-          "parameters": [
-            {
-              "name": "patient",
-              "value": "={{ $('Referral request').first().json.body.patientId }}"
-            },
-            {
-              "name": "category",
-              "value": "laboratory"
-            },
-            {
-              "name": "_sort",
-              "value": "-date"
-            },
-            {
-              "name": "_count",
-              "value": "100"
-            }
-          ]
-        }
-      },
-      "id": "a1000000-0000-4000-8000-000000000007",
-      "name": "Get labs",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        1440,
-        0
-      ]
-    },
-    {
-      "parameters": {
         "method": "POST",
         "url": "={{ $env.STEPS_URL }}/build_prompt",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ model: $env.AI_MODEL, request: $('Referral request').first().json.body, patient: $('Get patient').first().json, encounter: $('Get encounter').first().json, problems: $('Get problems').first().json, medications: $('Get medications').first().json, allergies: $('Get allergies').first().json, labs: $('Get labs').first().json }) }}",
+        "jsonBody": "={{ JSON.stringify(Object.assign({ model: $env.AI_MODEL }, $json)) }}",
         "options": {
           "response": {
             "response": {
@@ -220,7 +65,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        1680,
+        480,
         0
       ]
     },
@@ -253,7 +98,7 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        1920,
+        720,
         0
       ]
     },
@@ -287,7 +132,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        2160,
+        960,
         0
       ]
     },
@@ -312,7 +157,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        2400,
+        1200,
         0
       ]
     },
@@ -327,7 +172,7 @@
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
       "position": [
-        2640,
+        1440,
         0
       ]
     }
@@ -337,69 +182,14 @@
       "main": [
         [
           {
-            "node": "Get patient",
+            "node": "Get the chart",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Get patient": {
-      "main": [
-        [
-          {
-            "node": "Get encounter",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Get encounter": {
-      "main": [
-        [
-          {
-            "node": "Get problems",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Get problems": {
-      "main": [
-        [
-          {
-            "node": "Get medications",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Get medications": {
-      "main": [
-        [
-          {
-            "node": "Get allergies",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Get allergies": {
-      "main": [
-        [
-          {
-            "node": "Get labs",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Get labs": {
+    "Get the chart": {
       "main": [
         [
           {

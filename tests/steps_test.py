@@ -17,6 +17,7 @@ os.environ["STEPS_DIR"] = tmp
 sys.path.insert(0, str(ROOT / "n8n"))
 import step_server  # noqa: E402
 from ehr import scenarios  # noqa: E402
+from fake_fhir import fake_fhir, free_port  # noqa: E402
 
 REPLY = {"model": "gpt-5.3-codex",
          "output": [{"type": "reasoning", "content": []},
@@ -107,6 +108,46 @@ def main() -> None:
     path.write_text(path.read_text().replace('    # letter = letter.replace("**", "")', '    letter = letter.replace("**", "")'))
     reply = {**REPLY, "output": [{"type": "message", "content": [{"type": "output_text", "text": "**Patient:** Maria"}]}]}
     check("format_letter can clean up the letter once a line is switched on", post("pick_letter", reply)[1]["letter"] == "Patient: Maria")
+
+    # --- get_chart: which records the AI gets to see, read from the practice server ---
+    resources = [e["resource"] for k in scenarios.SCENARIOS for e in scenarios.bundle(k)["entry"]]
+    fhir = fake_fhir(resources)
+    threading.Thread(target=fhir.serve_forever, daemon=True).start()
+    os.environ["HAPI_BASE"] = f"http://127.0.0.1:{fhir.server_port}"
+    visit = next(r["id"] for r in resources if r["resourceType"] == "Encounter" and r["reasonCode"][0]["text"] == "Diabetes follow-up")
+    ask = {"patientId": "scn-maria", "encounterId": visit, "specialty": "Endocrinology", "urgency": "Routine", "reason": "Overdue review"}
+
+    status, chart = post("get_chart", ask)
+    check("get_chart reads the patient, the visit and the four lists",
+          status == 200 and chart["patient"]["id"] == "scn-maria" and chart["encounter"]["id"] == visit
+          and all(chart[k]["resourceType"] == "Bundle" and chart[k]["entry"] for k in ("problems", "medications", "allergies", "labs") if k != "allergies"))
+    check("it passes the request along unchanged", chart["request"] == ask)
+    paths = " ".join(fhir.seen)
+    check("it asks the server for each record with the settings at the top of the file",
+          f"/Patient/scn-maria" in paths and f"/Encounter/{visit}" in paths and "Condition?patient=scn-maria&_count=50" in paths
+          and "category=laboratory" in paths and "_sort=-date" in paths and "_count=100" in paths)
+    status, built = post("build_prompt", chart)
+    check("get_chart's answer goes straight into build_prompt",
+          status == 200 and "Patient: Maria Alvarez" in built["request"]["input"] and "Hemoglobin A1c: 7.8" in built["request"]["input"]
+          and "Reason: Diabetes follow-up" in built["request"]["input"])
+    check("build_prompt passes an error on instead of building from nothing", post("build_prompt", {"error": "x went wrong"})[1] == {"error": "x went wrong"})
+
+    chart_path = Path(tmp) / "get_chart.py"
+    chart_path.write_text(chart_path.read_text().replace('"_count": "100"', '"_count": "5"'))
+    fhir.seen.clear(); post("get_chart", ask)
+    check("changing a number in the file changes the search on the next request", any("_count=5" in p and "category=laboratory" in p for p in fhir.seen))
+    chart_path.write_text(chart_path.read_text().replace('    "labs": ("Observation"', '    # "labs": ("Observation"'))
+    status, chart = post("get_chart", ask)
+    check("taking a line out stops that record being read", status == 200 and "labs" not in chart)
+    check("and the AI then sees 'None documented.' for results",
+          "== Results (latest of each test) ==\nNone documented." in post("build_prompt", chart)[1]["request"]["input"])
+
+    status, out = post("get_chart", {**ask, "patientId": "nobody"})
+    check("an unknown patient gives a message that names the problem", status == 500 and "answered 404" in out["error"] and "Patient/nobody" in out["error"])
+    os.environ["HAPI_BASE"] = f"http://127.0.0.1:{free_port()}"
+    status, out = post("get_chart", ask)
+    check("a server that is not running gives a message that names hapi-up", status == 500 and "hapi-up" in out["error"])
+    fhir.shutdown()
 
     srv.shutdown()
     shutil.rmtree(tmp, ignore_errors=True)
