@@ -93,6 +93,7 @@ def _run_steps() -> None:
     _docker("rm", "-f", STEPS_CONTAINER, check=False)
     _docker(
         "run", "-d", "--name", STEPS_CONTAINER, "--network", hapi_local.NETWORK,
+        "-e", f"HAPI_BASE=http://{hapi_local.CONTAINER}:8080/fhir",          # get_chart.py reads the practice server
         "-v", f"{N8N_DIR / 'step_server.py'}:/app/step_server.py:ro", "-v", f"{N8N_DIR / 'steps'}:/steps:ro",
         "-w", "/app", STEPS_IMAGE, "python", "-u", "step_server.py",
     )

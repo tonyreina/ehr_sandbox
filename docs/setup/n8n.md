@@ -11,7 +11,7 @@ pixi run n8n-up
 
 The first start downloads n8n (about 1 GB) and takes a few minutes. Then open [http://localhost:5678](http://localhost:5678). The first time, n8n asks you to create an account: use any email and password. It stays on your computer.
 
-On the n8n home page, in the list of workflows, open the ready-made one called **Referral letter**. Each box is a step: it receives a request, reads the patient, the visit, problems, medications, allergies and labs from the practice server, builds the prompt with a Python step, asks the AI, picks the letter out of the reply with another Python step, and sends the letter back.
+On the n8n home page, in the list of workflows, open the ready-made one called **Referral letter**. Each box is a step: it receives a request, reads the patient's chart from the practice server with a Python step, builds the prompt with another Python step, asks the AI, picks the letter out of the reply with a third Python step, and sends the letter back.
 
 ## Use it from the dashboard
 
@@ -21,10 +21,11 @@ Start the dashboard with `pixi run smart-app --ehr hapi`, open a patient, and ch
 
 **In n8n:** open **Referral letter**, click a box to see what it does, change it, then press **Publish** so the dashboard uses your version. Your changes are kept when you stop and start n8n. `pixi run n8n-up --reset-workflows` puts the original back (and replaces your edits).
 
-**In VS Code:** two boxes run Python files. Open them in VS Code, change them and save. The next draft uses your change; there is nothing to restart or publish.
+**In VS Code:** three boxes run Python files. Open them in VS Code, change them and save. The next draft uses your change; there is nothing to restart or publish.
 
 | Box | File | What you can change |
 |---|---|---|
+| **Get the chart** | `n8n/steps/get_chart.py` | Which records are read from the practice server and how many (`READS`), so which records the AI can ever see |
 | **Build the prompt** | `n8n/steps/build_prompt.py` | The words the AI is told (`ROLE`, `RULES`), the letter's headings (`HEADINGS`), the closing and signature, and which records go into the chart text |
 | **Pick out the letter** | `n8n/steps/pick_letter.py` | How the finished letter looks (`format_letter`), for example removing the `**` marks |
 

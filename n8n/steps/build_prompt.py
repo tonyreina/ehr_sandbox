@@ -120,6 +120,8 @@ def chart_text(data: dict) -> str:
 
 
 def run(data: dict) -> dict:
+    if data.get("error"):                              # reading the chart failed: pass the message on
+        return {"error": data["error"]}
     ask = data.get("request") or {}
     reason = ask.get("reason") or "Not provided. Say what the encounter shows and that no reason was given."
     user = (f"CHART:\n{chart_text(data)}\n\nREFERRAL REQUEST\nSpecialty: {ask.get('specialty') or 'not given'}\n"
